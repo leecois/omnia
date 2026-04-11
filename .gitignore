@@ -45,6 +45,7 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
+!.env.docker.example
 
 # ── SpacetimeDB ──────────────────────────────────────────────────
 # Backend build artifacts
