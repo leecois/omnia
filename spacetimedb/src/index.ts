@@ -465,6 +465,58 @@ const ai_audit = table(
   }
 );
 
+// ─── Dev-admin break-glass tables ───────────────────────────────────────────
+//
+// These power the "Admin Impersonation" recovery flow:
+//
+//   1. On first deploy, someone calls seed_dev_admin_secret(secret) — this
+//      works once while dev_admin_secret is empty, then the guard closes.
+//   2. Any future client that knows the secret can call claim_super_admin
+//      and have their own ctx.sender identity added to super_admin.
+//   3. Existing super admins can rotate_dev_admin_secret at any time.
+//   4. Every attempt (success or failure) is recorded in dev_admin_audit,
+//      which is public and readable by super admins so ops can spot brute
+//      force attempts.
+//
+// dev_admin_secret is PRIVATE — the plaintext is never synced to clients,
+// only read inside the module when a claim reducer runs. (Hashing-at-rest
+// is unnecessary because the table is server-side-only.)
+
+const dev_admin_secret = table(
+  { name: 'dev_admin_secret', public: false },
+  {
+    id: t.u64().primaryKey(),   // always 1 — single-row table
+    secret: t.string(),
+    updatedAt: t.timestamp(),
+  }
+);
+
+const dev_admin_audit = table(
+  {
+    name: 'dev_admin_audit',
+    public: true,
+    indexes: [
+      {
+        accessor: 'byUser',
+        name: 'dev_admin_audit_user',
+        algorithm: 'btree',
+        columns: ['userIdentity'],
+      },
+    ],
+  },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    userIdentity: t.identity(),
+    // 'seed' | 'claim' | 'claim_failed' | 'rotate' | 'revoke'
+    action: t.string(),
+    // Only meaningful for claim / claim_failed / seed
+    success: t.bool(),
+    // Short free-form detail (e.g. failure reason), trimmed to 200 chars
+    detail: t.string(),
+    createdAt: t.timestamp(),
+  }
+);
+
 const spacetimedb = schema({
   user,
   server,
@@ -486,6 +538,8 @@ const spacetimedb = schema({
   ai_config,
   ask_request,
   ai_audit,
+  dev_admin_secret,
+  dev_admin_audit,
 });
 export default spacetimedb;
 
@@ -1910,6 +1964,181 @@ export const fail_ask_request = spacetimedb.reducer(
     });
   }
 );
+
+// ============================================================================
+// Dev-admin break-glass reducers (Admin Impersonation)
+// ============================================================================
+//
+// See the schema comments above for the overall security model.
+// Rules at a glance:
+//
+//   seed_dev_admin_secret   — callable by anyone, ONLY while the table is
+//                             empty. After one successful insert, the guard
+//                             permanently closes.
+//   rotate_dev_admin_secret — super admin only.
+//   claim_super_admin       — any caller. Rate-limited: ≥5 failed attempts
+//                             from the same identity within the last 60 s
+//                             blocks further attempts for another 60 s.
+//                             Idempotent: already-super callers are a no-op.
+//   revoke_super_admin_self — a super admin can atomically drop their own
+//                             super_admin row (clean exit from dev mode).
+//
+
+const MIN_DEV_SECRET_LEN = 16;
+const FAIL_WINDOW_MICROS = 60_000_000n;    // 60 s
+const FAIL_MAX_ATTEMPTS = 5;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function writeDevAuditRow(
+  ctx: any,
+  userIdentity: unknown,
+  action: string,
+  success: boolean,
+  detail: string,
+): void {
+  ctx.db.dev_admin_audit.insert({
+    id: 0n,
+    userIdentity,
+    action,
+    success,
+    detail: detail.slice(0, 200),
+    createdAt: ctx.timestamp,
+  });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function countRecentFailures(ctx: any, senderHex: string): number {
+  const cutoff = ctx.timestamp.microsSinceUnixEpoch - FAIL_WINDOW_MICROS;
+  let count = 0;
+  for (const row of ctx.db.dev_admin_audit.iter()) {
+    if (row.action !== 'claim_failed') continue;
+    if ((row.userIdentity as { toHexString(): string }).toHexString() !== senderHex) continue;
+    if (row.createdAt.microsSinceUnixEpoch < cutoff) continue;
+    count++;
+  }
+  return count;
+}
+
+export const seed_dev_admin_secret = spacetimedb.reducer(
+  { secret: t.string() },
+  (ctx, { secret }) => {
+    const existing = [...ctx.db.dev_admin_secret.iter()];
+    if (existing.length > 0) {
+      writeDevAuditRow(ctx, ctx.sender, 'seed', false, 'already seeded');
+      throw new SenderError('Dev admin secret has already been seeded. Use rotate instead.');
+    }
+    if (secret.length < MIN_DEV_SECRET_LEN) {
+      writeDevAuditRow(ctx, ctx.sender, 'seed', false, 'too short');
+      throw new SenderError(`Secret must be at least ${MIN_DEV_SECRET_LEN} characters`);
+    }
+    ctx.db.dev_admin_secret.insert({
+      id: 1n,
+      secret,
+      updatedAt: ctx.timestamp,
+    });
+    writeDevAuditRow(ctx, ctx.sender, 'seed', true, 'seeded');
+  }
+);
+
+export const rotate_dev_admin_secret = spacetimedb.reducer(
+  { newSecret: t.string() },
+  (ctx, { newSecret }) => {
+    if (!senderIsSuperAdmin(ctx)) {
+      writeDevAuditRow(ctx, ctx.sender, 'rotate', false, 'not super admin');
+      throw new SenderError('Only super admins may rotate the dev secret');
+    }
+    if (newSecret.length < MIN_DEV_SECRET_LEN) {
+      writeDevAuditRow(ctx, ctx.sender, 'rotate', false, 'too short');
+      throw new SenderError(`Secret must be at least ${MIN_DEV_SECRET_LEN} characters`);
+    }
+    const existing = ctx.db.dev_admin_secret.id.find(1n);
+    if (!existing) {
+      ctx.db.dev_admin_secret.insert({
+        id: 1n,
+        secret: newSecret,
+        updatedAt: ctx.timestamp,
+      });
+    } else {
+      ctx.db.dev_admin_secret.id.update({
+        ...existing,
+        secret: newSecret,
+        updatedAt: ctx.timestamp,
+      });
+    }
+    writeDevAuditRow(ctx, ctx.sender, 'rotate', true, 'rotated');
+  }
+);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function senderIsSuperAdmin(ctx: any): boolean {
+  // NOTE: we do NOT use the shared isSuperAdmin() helper here because it
+  // goes via ctx.db.super_admin.userIdentity.find(ctx.sender), which has
+  // proven unreliable across reducer invocations in the current
+  // SpacetimeDB runtime (stale cache / wrong match after deletes).
+  // Iterating and comparing by hex string gives deterministic results.
+  const senderHex = ctx.sender.toHexString();
+  for (const row of ctx.db.super_admin.iter()) {
+    if ((row.userIdentity as { toHexString(): string }).toHexString() === senderHex) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export const claim_super_admin = spacetimedb.reducer(
+  { secret: t.string() },
+  (ctx, { secret }) => {
+    const senderHex = ctx.sender.toHexString();
+
+    // Rate-limit check — count failures in the last 60 s window.
+    if (countRecentFailures(ctx, senderHex) >= FAIL_MAX_ATTEMPTS) {
+      writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'rate limited');
+      throw new SenderError('Too many failed attempts — wait a minute and try again');
+    }
+
+    const row = ctx.db.dev_admin_secret.id.find(1n);
+    if (!row) {
+      writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'not seeded');
+      throw new SenderError('Dev admin secret has not been seeded yet');
+    }
+    if (secret !== row.secret) {
+      writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'wrong secret');
+      throw new SenderError('Invalid secret');
+    }
+
+    // Idempotent — already super admin? do nothing (but still audit).
+    if (senderIsSuperAdmin(ctx)) {
+      writeDevAuditRow(ctx, ctx.sender, 'claim', true, 'already super');
+      return;
+    }
+
+    ctx.db.super_admin.insert({
+      userIdentity: ctx.sender,
+      grantedAt: ctx.timestamp,
+    });
+    writeDevAuditRow(ctx, ctx.sender, 'claim', true, 'granted');
+  }
+);
+
+export const revoke_super_admin_self = spacetimedb.reducer((ctx) => {
+  // Look up by iterating + hex-comparing rather than calling
+  // .userIdentity.find(ctx.sender) directly — the .find accessor is
+  // flaky with the Identity wrapper coming from ctx.sender in this
+  // runtime, and iter() gives us a known-good comparison path.
+  const senderHex = ctx.sender.toHexString();
+  let target: unknown = null;
+  for (const row of ctx.db.super_admin.iter()) {
+    if ((row.userIdentity as { toHexString(): string }).toHexString() === senderHex) {
+      target = row.userIdentity;
+      break;
+    }
+  }
+  if (target === null) {
+    throw new SenderError('You are not currently a super admin');
+  }
+  ctx.db.super_admin.userIdentity.delete(target as never);
+  writeDevAuditRow(ctx, ctx.sender, 'revoke', true, 'self revoke');
+});
 
 export const reseed_default_server = spacetimedb.reducer(ctx => {
   if (!isSuperAdmin(ctx, ctx.sender)) {
