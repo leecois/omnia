@@ -1275,9 +1275,9 @@ function AiSection({
   const [sourceChannelIds, setSourceChannelIds] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Ensure an ai_config row exists so the bot sees the server as "known".
-  // Called exactly once on mount (per server).
   useEffect(() => {
     ensureAiConfig({ serverId: server.id }).catch(err => {
       console.warn('[ai] ensure_ai_config failed:', err);
@@ -1296,23 +1296,50 @@ function AiSection({
     }
   }, [existing]);
 
+  // Dirty detection drives the sticky save bar visibility, matching the
+  // pattern used elsewhere in ServerSettings.
+  const dirty = useMemo(() => {
+    if (!existing) return false;
+    return (
+      enabled !== existing.enabled ||
+      askEnabled !== existing.askEnabled ||
+      summarizeEnabled !== existing.summarizeEnabled ||
+      (monthlyTokenBudget.trim() || '0') !== existing.monthlyTokenBudget.toString() ||
+      sourceChannelIds.trim() !== existing.sourceChannelIds
+    );
+  }, [existing, enabled, askEnabled, summarizeEnabled, monthlyTokenBudget, sourceChannelIds]);
+
+  const reset = () => {
+    if (!existing) return;
+    setEnabled(existing.enabled);
+    setAskEnabled(existing.askEnabled);
+    setSummarizeEnabled(existing.summarizeEnabled);
+    setMonthlyTokenBudget(existing.monthlyTokenBudget.toString());
+    setSourceChannelIds(existing.sourceChannelIds);
+    setError(null);
+  };
+
   const save = async () => {
     if (!canEdit || saving) return;
     setSaving(true);
+    setError(null);
     try {
-      const budget = BigInt(monthlyTokenBudget.trim() || '0');
+      const trimmed = monthlyTokenBudget.trim() || '0';
+      if (!/^\d+$/.test(trimmed)) {
+        throw new Error('Token budget must be a whole number');
+      }
       await updateAiConfig({
         serverId: server.id,
         enabled,
         askEnabled,
         summarizeEnabled,
-        monthlyTokenBudget: budget,
+        monthlyTokenBudget: BigInt(trimmed),
         sourceChannelIds: sourceChannelIds.trim(),
       });
       setSavedAt(Date.now());
       setTimeout(() => setSavedAt(null), 2500);
     } catch (err) {
-      alert(`Could not save: ${err instanceof Error ? err.message : String(err)}`);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
@@ -1324,110 +1351,189 @@ function AiSection({
     tokensBudget > 0n
       ? Math.min(100, Number((tokensUsed * 100n) / tokensBudget))
       : 0;
+  const nearLimit = pctUsed >= 80;
 
   return (
-    <div className="profile-section">
-      <h2 className="profile-heading">AI Assistant</h2>
-      <p className="profile-sub">
-        Enable the <code>/ask</code> slash command so members can ask questions grounded in this
-        server's messages. Answers are produced by a sidecar bot that indexes your docs channels
-        into a vector store (Qdrant) and queries an LLM (OpenAI or Gemini).
+    <div className="settings-section profile-section ai-section">
+      <h2 className="settings-section-title">AI Assistant</h2>
+      <p className="settings-section-subtitle">
+        Let members ask questions grounded in this server's messages with the
+        <code> /ask </code> slash command. A sidecar bot indexes messages into a
+        vector store (Qdrant) and queries an LLM (OpenAI or Gemini). Token usage
+        is capped by the monthly budget below.
       </p>
 
-      <div className="ch-setup-section" style={{ marginTop: 24 }}>
-        <label className="profile-field">
-          <input
-            type="checkbox"
-            checked={enabled}
-            disabled={!canEdit}
-            onChange={e => setEnabled(e.target.checked)}
-            style={{ marginRight: 8 }}
-          />
-          <span className="profile-field-label" style={{ display: 'inline' }}>
-            Enable AI assistant on this server
-          </span>
-        </label>
+      {!canEdit && (
+        <div className="ai-perm-notice" role="note">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2L2 22h20L12 2zm0 6l7.53 13H4.47L12 8zm-1 4v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
+          </svg>
+          <span>You need the <strong>Manage Server</strong> permission to change AI settings.</span>
+        </div>
+      )}
 
-        <label className="profile-field" style={{ marginTop: 12 }}>
-          <input
-            type="checkbox"
-            checked={askEnabled}
-            disabled={!canEdit || !enabled}
-            onChange={e => setAskEnabled(e.target.checked)}
-            style={{ marginRight: 8 }}
-          />
-          <span className="profile-field-label" style={{ display: 'inline' }}>
-            Enable <code>/ask</code> slash command
-          </span>
-        </label>
+      {/* ── Feature toggles ─────────────────────────────────────── */}
+      <div className="ai-group">
+        <div className="ai-group-header">Features</div>
 
-        <label className="profile-field" style={{ marginTop: 12 }}>
-          <input
-            type="checkbox"
-            checked={summarizeEnabled}
-            disabled={!canEdit || !enabled}
-            onChange={e => setSummarizeEnabled(e.target.checked)}
-            style={{ marginRight: 8 }}
-          />
-          <span className="profile-field-label" style={{ display: 'inline' }}>
-            Enable thread summarization (coming soon)
-          </span>
-        </label>
+        <AiToggleRow
+          label="AI assistant"
+          title="AI assistant"
+          sub="Master switch. Turn this off to pause all AI features for this server."
+          checked={enabled}
+          disabled={!canEdit}
+          onChange={setEnabled}
+        />
+        <AiToggleRow
+          label="/ask slash command"
+          title={<><code>/ask</code> slash command</>}
+          sub="Members can type /ask <question> in any channel and the bot replies with a grounded answer."
+          checked={askEnabled}
+          disabled={!canEdit || !enabled}
+          onChange={setAskEnabled}
+        />
+        <AiToggleRow
+          label="Thread summarization"
+          title="Thread summarization"
+          sub="Generate a TL;DR for long threads. Coming soon."
+          checked={summarizeEnabled}
+          disabled={!canEdit || !enabled}
+          onChange={setSummarizeEnabled}
+          badge="SOON"
+        />
       </div>
 
-      <div className="ch-setup-section" style={{ marginTop: 24 }}>
-        <label className="profile-field">
-          <span className="profile-field-label">Monthly token budget</span>
+      {/* ── Budget ──────────────────────────────────────────────── */}
+      <div className="ai-group">
+        <div className="ai-group-header">Budget</div>
+
+        <div className="settings-field ai-field">
+          <label htmlFor="ai-budget-input">MONTHLY TOKEN BUDGET</label>
           <input
-            type="number"
-            min="0"
+            id="ai-budget-input"
+            type="text"
+            inputMode="numeric"
             value={monthlyTokenBudget}
             disabled={!canEdit}
-            onChange={e => setMonthlyTokenBudget(e.target.value)}
-            className="profile-input"
+            onChange={e => setMonthlyTokenBudget(e.target.value.replace(/[^0-9]/g, ''))}
           />
-          <span className="profile-field-help">
-            0 = unlimited. 1 M tokens ≈ $0.30 at gpt-4o-mini rates.
-          </span>
-        </label>
+          <div className="settings-field-hint">
+            0 = unlimited. 1 000 000 tokens ≈ $0.30 at gpt-4o-mini rates.
+          </div>
+        </div>
 
         {tokensBudget > 0n && (
-          <div className="profile-field-help" style={{ marginTop: 8 }}>
-            Used this month: <strong>{tokensUsed.toString()}</strong> / {tokensBudget.toString()} tokens ({pctUsed}%)
+          <div className="ai-budget-progress">
+            <div className="ai-budget-progress-head">
+              <span>
+                <strong>{formatCount(tokensUsed)}</strong> / {formatCount(tokensBudget)} tokens
+              </span>
+              <span className={`ai-budget-pct ${nearLimit ? 'ai-budget-warn' : ''}`}>
+                {pctUsed}%
+              </span>
+            </div>
+            <div className="ai-budget-bar">
+              <div
+                className={`ai-budget-bar-fill ${nearLimit ? 'ai-budget-bar-warn' : ''}`}
+                style={{ width: `${pctUsed}%` }}
+              />
+            </div>
           </div>
         )}
       </div>
 
-      <div className="ch-setup-section" style={{ marginTop: 24 }}>
-        <label className="profile-field">
-          <span className="profile-field-label">Source channels</span>
+      {/* ── Source channels ─────────────────────────────────────── */}
+      <div className="ai-group">
+        <div className="ai-group-header">Sources</div>
+
+        <div className="settings-field ai-field">
+          <label htmlFor="ai-sources-input">SOURCE CHANNELS</label>
           <input
+            id="ai-sources-input"
             type="text"
             value={sourceChannelIds}
             disabled={!canEdit}
             onChange={e => setSourceChannelIds(e.target.value)}
             placeholder="Leave blank to index all channels"
-            className="profile-input"
           />
-          <span className="profile-field-help">
-            Comma-separated channel IDs. Leave blank to index every channel in this server.
-          </span>
-        </label>
+          <div className="settings-field-hint">
+            Comma-separated channel IDs. Blank = index every channel in this server.
+          </div>
+        </div>
       </div>
 
-      <div className="profile-actions" style={{ marginTop: 24 }}>
-        <button className="btn-primary" onClick={save} disabled={!canEdit || saving}>
-          {saving ? 'Saving…' : savedAt ? 'Saved ✓' : 'Save'}
-        </button>
-      </div>
+      {error && <div className="settings-error">{error}</div>}
 
-      {!canEdit && (
-        <p className="profile-field-help" style={{ marginTop: 16 }}>
-          You need the Manage Server permission to change AI settings.
-        </p>
+      {/* Sticky save bar — only visible when there are unsaved changes. */}
+      {canEdit && dirty && (
+        <div className="settings-save-bar">
+          <span>Careful — you have unsaved changes.</span>
+          <div>
+            <button type="button" className="btn-link" onClick={reset} disabled={saving}>
+              Reset
+            </button>
+            <button type="button" className="btn-primary" onClick={save} disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Transient saved confirmation toast */}
+      {!dirty && savedAt && (
+        <div className="ai-saved-toast" role="status">Saved ✓</div>
       )}
     </div>
   );
+}
+
+function AiToggleRow({
+  label,
+  title,
+  sub,
+  checked,
+  disabled,
+  onChange,
+  badge,
+}: {
+  /** Plain-text accessible name, always provided separately from `title`
+   *  so screen readers get a string even when the visual title is JSX. */
+  label: string;
+  title: React.ReactNode;
+  sub: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: (v: boolean) => void;
+  badge?: string;
+}) {
+  return (
+    <label className={`ai-toggle-row ${disabled ? 'ai-toggle-row-disabled' : ''}`}>
+      <div className="ai-toggle-row-text">
+        <div className="ai-toggle-row-title">
+          {title}
+          {badge && <span className="ai-toggle-badge">{badge}</span>}
+        </div>
+        <div className="ai-toggle-row-sub">{sub}</div>
+      </div>
+      <span className={`ai-switch ${checked ? 'on' : ''} ${disabled ? 'disabled' : ''}`}>
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={e => onChange(e.target.checked)}
+          aria-label={label}
+        />
+        <span className="ai-switch-track" />
+        <span className="ai-switch-thumb" />
+      </span>
+    </label>
+  );
+}
+
+function formatCount(n: bigint): string {
+  const s = n.toString();
+  // Insert thin spaces as thousands separators
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
 }
 
 // ─── Section: Channels ───────────────────────────────────────────────────
