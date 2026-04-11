@@ -1691,7 +1691,7 @@ function EmojiPickerPopover({
   onPick,
   onClose,
 }: {
-  pickerRef: React.RefObject<HTMLDivElement>;
+  pickerRef: React.RefObject<HTMLDivElement | null>;
   top: number;
   left: number;
   onPick: (emoji: string) => void;
