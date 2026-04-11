@@ -1,0 +1,105 @@
+# ── Dependencies ─────────────────────────────────────────────────
+node_modules/
+package-lock.json
+yarn.lock
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# ── Build output ─────────────────────────────────────────────────
+dist/
+dist-ssr/
+build/
+out/
+*.local
+
+# ── Vite ─────────────────────────────────────────────────────────
+.vite/
+vite.config.*.timestamp-*
+
+# ── TypeScript ───────────────────────────────────────────────────
+*.tsbuildinfo
+.tsbuildinfo
+
+# ── Testing ──────────────────────────────────────────────────────
+coverage/
+*.lcov
+.nyc_output/
+
+# ── Logs ─────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── Environment files ────────────────────────────────────────────
+# Keep .env.example tracked; ignore everything else
+.env
+.env.*
+!.env.example
+
+# ── SpacetimeDB ──────────────────────────────────────────────────
+# Backend build artifacts
+spacetimedb/dist/
+spacetimedb/target/
+# Auth token cache (if ever written locally)
+.spacetime/
+
+# ── Caches ───────────────────────────────────────────────────────
+.cache/
+.parcel-cache/
+.turbo/
+.rollup.cache/
+.eslintcache
+.stylelintcache
+
+# ── Editor / IDE ─────────────────────────────────────────────────
+# VS Code — keep shared workspace recommendations
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.history/
+
+# JetBrains
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+
+# ── OS files ─────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Tool-specific ────────────────────────────────────────────────
+# oh-my-claudecode runtime cache (machine-local, auto-regenerated)
+.omc/
+
+# ── Misc ─────────────────────────────────────────────────────────
+*.pid
+*.seed
+*.tgz
+.tmp/
+tmp/
