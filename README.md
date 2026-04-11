@@ -146,6 +146,117 @@ View live server logs:
 spacetime logs your-database-name
 ```
 
+## AI assistant (`/ask`)
+
+Omnia ships with a RAG-based documentation assistant: type `/ask <question>`
+in any channel and a sidecar bot answers with citations grounded in that
+server's messages.
+
+### Architecture
+
+```
+  User types /ask foo
+        │
+        ▼
+  createAskRequest reducer  ─────────────►  SpacetimeDB (ask_request: pending)
+                                                     │
+                                                     │ (subscription)
+                                                     ▼
+                                           ┌──────────────────┐
+                                           │   ai-bot (Bun)   │
+                                           │                  │
+                                           │  1. embed Q      │───► LLM (embeddings)
+                                           │  2. vector search│───► Qdrant
+                                           │  3. fetch msgs   │◄─── local SpacetimeDB cache
+                                           │  4. chat compl.  │───► LLM (chat)
+                                           │  5. sendMessage  │───► SpacetimeDB
+                                           │  6. resolveAsk   │───► SpacetimeDB
+                                           └──────────────────┘
+```
+
+The bot is a separate sub-package (`ai-bot/`) — it does **not** run inside
+the SpacetimeDB module (SpacetimeDB reducers are deterministic and can't
+call external APIs). Instead, it connects as a normal SpacetimeDB user and
+uses the public reducer/subscription API like any other client.
+
+### Setup
+
+1. **Deploy [Qdrant](https://qdrant.tech)** — I run mine via Dokploy at
+   `https://qdrant.example.com` with API-key auth.
+
+2. **Pick an LLM provider:**
+   - **OpenAI** — uses `text-embedding-3-small` + `gpt-4o-mini`, pay-as-you-go
+   - **Google Gemini** — uses `gemini-embedding-001` + `gemini-2.5-flash`,
+     has a generous free tier
+
+3. **Fill in `.env.local`** (reuse the frontend's file so both share creds):
+   ```env
+   AI_PROVIDER=gemini
+   QDRANT_URL=https://qdrant.yourhost.com
+   QDRANT_API_KEY=…
+   QDRANT_COLLECTION=omnia_messages
+   GOOGLE_GENERATIVE_AI_API_KEY=…
+   # or: OPENAI_API_KEY=sk-…
+   ```
+
+4. **Install bot deps:**
+   ```bash
+   cd ai-bot && bun install
+   ```
+
+5. **Run the smoke test** to verify the LLM + Qdrant path before booting:
+   ```bash
+   bun --env-file=../.env.local run src/smoke.ts
+   ```
+
+6. **Start the bot:**
+   ```bash
+   bun run start
+   ```
+   On first boot it creates the Qdrant collection, mints its SpacetimeDB
+   identity, and persists the auth token to `.bot-token` for future runs.
+
+7. **Enable AI on a server** — open the server in the frontend, go to
+   **Server Settings → Apps → AI Assistant**, toggle both switches, set a
+   token budget, and save. The bot immediately runs backfill over that
+   server's existing messages and goes live.
+
+8. **Type `/ask <question>`** in any channel. The bot will post a grounded
+   answer with inline citations within a few seconds.
+
+### Bot verification scripts
+
+Two helpers live under `ai-bot/src/`:
+
+| Script | Purpose |
+|---|---|
+| `smoke.ts` | Exercises embed → Qdrant upsert → vector search → chat completion. Runs without touching SpacetimeDB. Takes ~5 s. |
+| `verify.ts` | Connects to the live DB, prints a state report (ai_configs, message counts, ask_requests, audit, Qdrant point counts), and runs reducer validation tests (empty/long/invalid questions). |
+| `verify-e2e.ts` | Posts real questions and prints the bot's answers so you can eyeball RAG quality. |
+
+Run any of them with:
+```bash
+cd ai-bot && bun --env-file=../.env.local run src/smoke.ts
+```
+
+### Schema additions
+
+The following tables and reducers were added to support AI features:
+
+| Table | Purpose |
+|---|---|
+| `ai_config` | Per-server feature flags + monthly token budget |
+| `ask_request` | Pending/answered/failed RAG requests |
+| `ai_audit` | Token usage log (user, feature, cost) |
+
+| Reducer | Caller | Purpose |
+|---|---|---|
+| `ensureAiConfig` | anyone | Idempotent default-row bootstrap |
+| `updateAiConfig` | server admin | Toggle features, set budget |
+| `createAskRequest` | any member | Submit a question, creates pending row |
+| `resolveAskRequest` | bot | Mark as answered, log tokens |
+| `failAskRequest` | bot | Mark as failed with error message |
+
 ## Deployment
 
 Omnia uses [SpacetimeDB maincloud](https://maincloud.spacetimedb.com) as its
