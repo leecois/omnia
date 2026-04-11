@@ -6094,45 +6094,44 @@ a:hover {
 .notif-btn-dismiss:hover { background: var(--bg-modifier-hover, rgba(255,255,255,.16)); }
 
 /* ── Super Admin Mode banner ────────────────────────────────── */
-
+/*
+ * Red bar at the top of the app, in normal document flow. `position:
+ * relative` is what gives it a stacking context so z-index applies —
+ * stays BELOW modal overlays (50 vs 100) so opened modals render on
+ * top of it. Explicit 42px height so .app.sa-active's calc() matches
+ * the actual pixels exactly.
+ */
 .sa-banner {
-  position: sticky;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  position: relative;
+  z-index: 50;
+  height: 42px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 20px;
-  background: linear-gradient(90deg, #b8002e 0%, #e3413d 50%, #b8002e 100%);
-  background-size: 200% 100%;
-  animation: sa-banner-pulse 4s linear infinite;
+  padding: 0 20px;
+  background: var(--red-400);
   color: #fff;
   font-size: 13px;
   font-weight: 500;
-  box-shadow: 0 2px 12px rgba(184, 0, 46, 0.45);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-}
-@keyframes sa-banner-pulse {
-  0%   { background-position: 0% 0; }
-  100% { background-position: 200% 0; }
+  box-shadow: 0 2px 12px rgba(242, 63, 67, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .sa-banner-dot {
+  flex-shrink: 0;
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #fff;
-  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.65);
   animation: sa-dot-pulse 1.8s ease-in-out infinite;
 }
 @keyframes sa-dot-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.65); }
   50%      { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);   }
 }
 .sa-banner-text {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   align-items: baseline;
   gap: 12px;
@@ -6142,6 +6141,7 @@ a:hover {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-size: 13px;
 }
 .sa-banner-sub {
   font-size: 12px;
@@ -6151,147 +6151,226 @@ a:hover {
   text-overflow: ellipsis;
 }
 .sa-banner-exit {
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   color: #fff;
   font-weight: 600;
   font-size: 12px;
-  padding: 6px 14px;
-  border-radius: 4px;
+  padding: 5px 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s ease;
+  line-height: 1.4;
 }
-.sa-banner-exit:hover { background: rgba(255, 255, 255, 0.30); }
+.sa-banner-exit:hover  { background: rgba(255, 255, 255, 0.30); }
+.sa-banner-exit:active { background: rgba(255, 255, 255, 0.38); }
 .sa-banner-exit:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Push the whole app down by the banner height so it doesn't cover the chat. */
+.sa-banner-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.sa-banner-confirm-q {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+.sa-banner-danger {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.75);
+}
+.sa-banner-danger:hover  { background: rgba(0, 0, 0, 0.44); }
+.sa-banner-danger:active { background: rgba(0, 0, 0, 0.55); }
+
+/* Push the app down so the banner doesn't overlap the chat. */
 .app.sa-active { height: calc(100vh - 42px); }
 
 /* ── Developer Access modal ─────────────────────────────────── */
-
+/*
+ * Self-contained. Does NOT use the base `.modal` class because those
+ * rules collide with my input/label/header styling. Follows the
+ * .invite-modal pattern: var(--bg-primary) shell, var(--radius-md)
+ * corners, var(--elevation-high) shadow.
+ */
 .dev-admin-modal {
-  width: 460px;
+  position: relative;
+  width: 440px;                           /* match .invite-modal / Discord canon */
   max-width: 95vw;
-  padding: 0;
-  overflow: hidden;
+  max-height: 85vh;                       /* scroll long error content instead of overflowing */
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden auto;
+  box-shadow: var(--elevation-high);
+  animation: modal-slide 0.15s ease-out;
+  display: flex;
+  flex-direction: column;
 }
+
 .dev-admin-header {
   display: flex;
-  gap: 14px;
-  padding: 20px 22px 16px;
   align-items: flex-start;
-  border-bottom: 1px solid var(--bg-modifier-accent, rgba(255,255,255,.06));
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-.dev-admin-icon {
-  font-size: 30px;
-  line-height: 1;
-  flex-shrink: 0;
-  padding-top: 2px;
+.dev-admin-header-text {
+  flex: 1;
+  min-width: 0;
 }
 .dev-admin-title {
   margin: 0 0 4px;
-  font-size: 18px;
-  color: var(--text-normal);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--header-primary);
+  line-height: 1.2;
 }
 .dev-admin-sub {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   line-height: 1.5;
 }
 .dev-admin-sub code {
-  background: var(--bg-modifier-accent, rgba(255,255,255,.08));
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 11px;
+  background: var(--bg-tertiary);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--text-normal);
 }
+.dev-admin-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: var(--interactive-normal);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dev-admin-close:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
+}
+
 .dev-admin-body {
-  padding: 20px 22px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
+
 .dev-admin-label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  color: var(--header-secondary);
 }
+
 .dev-admin-input {
-  background: var(--bg-tertiary, #1e1f22);
+  width: 100%;
+  background: var(--bg-tertiary);
   color: var(--text-normal);
-  border: 1px solid var(--bg-modifier-accent, rgba(255,255,255,.1));
-  border-radius: 4px;
-  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
   font-size: 14px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 400;
+  transition: border-color 0.12s ease;
 }
 .dev-admin-input:focus {
   outline: none;
-  border-color: #5865f2;
+  border-color: var(--brand-blurple);
 }
+.dev-admin-input::placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-primary, inherit);
+  letter-spacing: normal;
+}
+
 .dev-admin-submit {
-  background: #b8002e;
+  background: var(--brand-blurple);
   color: #fff;
   border: none;
-  border-radius: 4px;
-  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  padding: 11px 18px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.12s ease;
+  font-family: inherit;
 }
-.dev-admin-submit:hover:not(:disabled) { background: #9c0027; }
+.dev-admin-submit:hover:not(:disabled)  { background: var(--brand-blurple-560); }
+.dev-admin-submit:active:not(:disabled) { background: var(--brand-blurple-600); }
 .dev-admin-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .dev-admin-submit-secondary {
-  background: var(--bg-modifier-accent, rgba(255,255,255,.12));
+  background: var(--bg-modifier-hover);
   color: var(--text-normal);
-  margin-top: 6px;
+  margin-top: 8px;
+  width: 100%;
 }
 .dev-admin-submit-secondary:hover:not(:disabled) {
-  background: var(--bg-modifier-hover, rgba(255,255,255,.18));
+  background: var(--bg-modifier-active);
 }
+
 .dev-admin-help {
   margin: 0;
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
 }
-.dev-admin-notice {
-  padding: 10px 22px;
-  background: rgba(35, 165, 90, 0.14);
-  color: #23a55a;
+
+.dev-admin-notice,
+.dev-admin-error {
+  padding: 12px 20px;
   font-size: 13px;
-  border-top: 1px solid rgba(35, 165, 90, 0.25);
+  border-top: 1px solid var(--bg-modifier-accent, rgba(255, 255, 255, 0.06));
+  line-height: 1.4;
+}
+.dev-admin-notice {
+  background: rgba(35, 165, 90, 0.12);
+  color: #23a55a;
 }
 .dev-admin-error {
-  padding: 10px 22px;
-  background: rgba(242, 63, 67, 0.14);
-  color: #f23f43;
-  font-size: 13px;
-  border-top: 1px solid rgba(242, 63, 67, 0.25);
+  background: rgba(242, 63, 67, 0.12);
+  color: var(--red-400);
 }
+
 .dev-admin-rotate {
-  margin-top: 8px;
-  padding: 14px;
-  background: var(--bg-tertiary, rgba(0,0,0,0.15));
-  border-radius: 6px;
-  border: 1px dashed var(--bg-modifier-accent, rgba(255,255,255,.1));
+  margin-top: 4px;
+  padding: 14px 16px;
+  background: var(--bg-secondary-alt);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--bg-modifier-accent, rgba(255, 255, 255, 0.06));
 }
 .dev-admin-rotate h4 {
   margin: 0 0 6px;
-  font-size: 13px;
-  color: var(--text-normal);
+  font-size: 12px;
+  color: var(--header-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  font-weight: 700;
 }
 .dev-admin-rotate p {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;

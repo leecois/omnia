@@ -17,7 +17,7 @@
 //   * No "remember me" — re-entering the secret per session is fine for a
 //     break-glass tool and keeps the blast radius small
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useReducer } from 'spacetimedb/react';
 import { reducers } from '../module_bindings';
 
@@ -27,6 +27,10 @@ interface Props {
   isSuperAdmin: boolean;
 }
 
+// Selector that matches every focusable element. Used for the focus trap.
+const FOCUSABLE =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
   const [mode, setMode] = useState<'claim' | 'seed'>('claim');
   const [secret, setSecret] = useState('');
@@ -34,6 +38,7 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const claimSuperAdmin = useReducer(reducers.claimSuperAdmin);
   const seedDevAdminSecret = useReducer(reducers.seedDevAdminSecret);
@@ -47,7 +52,38 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
     setError(null);
     setNotice(null);
     setBusy(false);
+    setMode('claim');
   }, [open]);
+
+  // Escape to close + Tab focus trap. Scoped to this component so the
+  // handler always reads the current `open` value via the effect closure.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const nodes = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (nodes.length === 0) return;
+      const first = nodes[0]!;
+      const last = nodes[nodes.length - 1]!;
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first || !dialogRef.current.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -113,13 +149,18 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div
-        className="modal dev-admin-modal"
+        ref={dialogRef}
+        className="dev-admin-modal"
         onMouseDown={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dev-admin-title"
       >
-        <div className="dev-admin-header">
-          <div className="dev-admin-icon" aria-hidden="true">🔐</div>
-          <div>
-            <h3 className="dev-admin-title">Developer Access</h3>
+        <header className="dev-admin-header">
+          <div className="dev-admin-header-text">
+            <h3 id="dev-admin-title" className="dev-admin-title">
+              Developer Access
+            </h3>
             <p className="dev-admin-sub">
               Break-glass claim of super-admin privileges. Every action on this
               screen is recorded in <code>dev_admin_audit</code>.
@@ -127,15 +168,15 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
           </div>
           <button
             type="button"
-            className="modal-close-btn"
+            className="dev-admin-close"
             onClick={onClose}
             aria-label="Close"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
             </svg>
           </button>
-        </div>
+        </header>
 
         {mode === 'claim' && (
           <form onSubmit={doClaim} className="dev-admin-body">
