@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useReducer } from 'spacetimedb/react';
-import { reducers } from '../module_bindings';
+import { useReducer, useTable } from 'spacetimedb/react';
+import { reducers, tables } from '../module_bindings';
 import type {
   Server,
   Channel,
@@ -26,6 +26,7 @@ type SettingsSection =
   | 'invites'
   | 'access'
   | 'channels'
+  | 'ai'
   | 'integrations'
   | 'appdir'
   | 'safety'
@@ -84,6 +85,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     header: 'Apps',
     items: [
+      { id: 'ai', label: 'AI Assistant' },
       { id: 'integrations', label: 'Integrations', stub: true },
       { id: 'appdir', label: 'App Directory', stub: true, external: true },
     ],
@@ -269,12 +271,19 @@ export default function ServerSettings({
               isSuperAdmin={isSuperAdmin}
             />
           )}
+          {section === 'ai' && (
+            <AiSection
+              server={server}
+              canEdit={isAdmin || isSuperAdmin}
+            />
+          )}
           {/* All other sections are stubs */}
           {section !== 'profile' &&
             section !== 'members' &&
             section !== 'invites' &&
             section !== 'roles' &&
-            section !== 'channels' && <ComingSoonSection sectionId={section} />}
+            section !== 'channels' &&
+            section !== 'ai' && <ComingSoonSection sectionId={section} />}
         </div>
 
         <button
@@ -1236,6 +1245,187 @@ function RolesSection({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Section: AI Assistant ───────────────────────────────────────────────
+
+function AiSection({
+  server,
+  canEdit,
+}: {
+  server: Server;
+  canEdit: boolean;
+}) {
+  const [allConfigs] = useTable(tables.ai_config);
+  const ensureAiConfig = useReducer(reducers.ensureAiConfig);
+  const updateAiConfig = useReducer(reducers.updateAiConfig);
+
+  const existing = useMemo(
+    () => allConfigs.find(c => c.serverId === server.id) ?? null,
+    [allConfigs, server.id]
+  );
+
+  // Local editor state — seeded from the existing row, fall back to defaults.
+  const [enabled, setEnabled] = useState(false);
+  const [askEnabled, setAskEnabled] = useState(false);
+  const [summarizeEnabled, setSummarizeEnabled] = useState(false);
+  const [monthlyTokenBudget, setMonthlyTokenBudget] = useState<string>('1000000');
+  const [sourceChannelIds, setSourceChannelIds] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  // Ensure an ai_config row exists so the bot sees the server as "known".
+  // Called exactly once on mount (per server).
+  useEffect(() => {
+    ensureAiConfig({ serverId: server.id }).catch(err => {
+      console.warn('[ai] ensure_ai_config failed:', err);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [server.id]);
+
+  // Sync local editor state when the row first arrives / changes externally.
+  useEffect(() => {
+    if (existing) {
+      setEnabled(existing.enabled);
+      setAskEnabled(existing.askEnabled);
+      setSummarizeEnabled(existing.summarizeEnabled);
+      setMonthlyTokenBudget(existing.monthlyTokenBudget.toString());
+      setSourceChannelIds(existing.sourceChannelIds);
+    }
+  }, [existing]);
+
+  const save = async () => {
+    if (!canEdit || saving) return;
+    setSaving(true);
+    try {
+      const budget = BigInt(monthlyTokenBudget.trim() || '0');
+      await updateAiConfig({
+        serverId: server.id,
+        enabled,
+        askEnabled,
+        summarizeEnabled,
+        monthlyTokenBudget: budget,
+        sourceChannelIds: sourceChannelIds.trim(),
+      });
+      setSavedAt(Date.now());
+      setTimeout(() => setSavedAt(null), 2500);
+    } catch (err) {
+      alert(`Could not save: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const tokensUsed = existing?.tokensUsedThisMonth ?? 0n;
+  const tokensBudget = existing?.monthlyTokenBudget ?? 0n;
+  const pctUsed =
+    tokensBudget > 0n
+      ? Math.min(100, Number((tokensUsed * 100n) / tokensBudget))
+      : 0;
+
+  return (
+    <div className="profile-section">
+      <h2 className="profile-heading">AI Assistant</h2>
+      <p className="profile-sub">
+        Enable the <code>/ask</code> slash command so members can ask questions grounded in this
+        server's messages. Answers are produced by a sidecar bot that indexes your docs channels
+        into a vector store (Qdrant) and queries an LLM (OpenAI or Gemini).
+      </p>
+
+      <div className="ch-setup-section" style={{ marginTop: 24 }}>
+        <label className="profile-field">
+          <input
+            type="checkbox"
+            checked={enabled}
+            disabled={!canEdit}
+            onChange={e => setEnabled(e.target.checked)}
+            style={{ marginRight: 8 }}
+          />
+          <span className="profile-field-label" style={{ display: 'inline' }}>
+            Enable AI assistant on this server
+          </span>
+        </label>
+
+        <label className="profile-field" style={{ marginTop: 12 }}>
+          <input
+            type="checkbox"
+            checked={askEnabled}
+            disabled={!canEdit || !enabled}
+            onChange={e => setAskEnabled(e.target.checked)}
+            style={{ marginRight: 8 }}
+          />
+          <span className="profile-field-label" style={{ display: 'inline' }}>
+            Enable <code>/ask</code> slash command
+          </span>
+        </label>
+
+        <label className="profile-field" style={{ marginTop: 12 }}>
+          <input
+            type="checkbox"
+            checked={summarizeEnabled}
+            disabled={!canEdit || !enabled}
+            onChange={e => setSummarizeEnabled(e.target.checked)}
+            style={{ marginRight: 8 }}
+          />
+          <span className="profile-field-label" style={{ display: 'inline' }}>
+            Enable thread summarization (coming soon)
+          </span>
+        </label>
+      </div>
+
+      <div className="ch-setup-section" style={{ marginTop: 24 }}>
+        <label className="profile-field">
+          <span className="profile-field-label">Monthly token budget</span>
+          <input
+            type="number"
+            min="0"
+            value={monthlyTokenBudget}
+            disabled={!canEdit}
+            onChange={e => setMonthlyTokenBudget(e.target.value)}
+            className="profile-input"
+          />
+          <span className="profile-field-help">
+            0 = unlimited. 1 M tokens ≈ $0.30 at gpt-4o-mini rates.
+          </span>
+        </label>
+
+        {tokensBudget > 0n && (
+          <div className="profile-field-help" style={{ marginTop: 8 }}>
+            Used this month: <strong>{tokensUsed.toString()}</strong> / {tokensBudget.toString()} tokens ({pctUsed}%)
+          </div>
+        )}
+      </div>
+
+      <div className="ch-setup-section" style={{ marginTop: 24 }}>
+        <label className="profile-field">
+          <span className="profile-field-label">Source channels</span>
+          <input
+            type="text"
+            value={sourceChannelIds}
+            disabled={!canEdit}
+            onChange={e => setSourceChannelIds(e.target.value)}
+            placeholder="Leave blank to index all channels"
+            className="profile-input"
+          />
+          <span className="profile-field-help">
+            Comma-separated channel IDs. Leave blank to index every channel in this server.
+          </span>
+        </label>
+      </div>
+
+      <div className="profile-actions" style={{ marginTop: 24 }}>
+        <button className="btn-primary" onClick={save} disabled={!canEdit || saving}>
+          {saving ? 'Saving…' : savedAt ? 'Saved ✓' : 'Save'}
+        </button>
+      </div>
+
+      {!canEdit && (
+        <p className="profile-field-help" style={{ marginTop: 16 }}>
+          You need the Manage Server permission to change AI settings.
+        </p>
+      )}
     </div>
   );
 }

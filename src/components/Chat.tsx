@@ -582,6 +582,7 @@ function ChannelPane({
   const toggleReaction = useReducer(reducers.toggleReaction);
   const pinMessage = useReducer(reducers.pinMessage);
   const unpinMessage = useReducer(reducers.unpinMessage);
+  const createAskRequest = useReducer(reducers.createAskRequest);
 
   useEffect(() => { setDraft(''); setReplyTo(null); }, [channel.id]);
   useEffect(() => {
@@ -594,6 +595,27 @@ function ChannelPane({
     if (!canWrite) return;
     if (!draft.trim() && !attachmentUrl) return;
     if (cooldownRemaining > 0) return;
+
+    // /ask <question> — route to the AI RAG pipeline instead of sending
+    // a normal message. The bot picks up the pending ask_request row via
+    // its subscription and posts the answer as a separate message.
+    const trimmed = draft.trim();
+    if (trimmed.toLowerCase().startsWith('/ask ')) {
+      const question = trimmed.slice(5).trim();
+      if (question.length === 0) return;
+      setDraft('');
+      createAskRequest({
+        channelId: channel.id,
+        threadId: 0n,
+        question,
+      }).catch(err => {
+        console.error(err);
+        setDraft(trimmed);
+        alert(String(err?.message ?? err));
+      });
+      return;
+    }
+
     const text = transformSlashCommand(draft);
     const url = attachmentUrl;
     const reply = replyTo;
@@ -861,6 +883,7 @@ function ThreadPanel({
   const deleteMessage = useReducer(reducers.deleteMessage);
   const editMessage = useReducer(reducers.editMessage);
   const toggleReaction = useReducer(reducers.toggleReaction);
+  const createAskRequest = useReducer(reducers.createAskRequest);
 
   const sorted = [...messages].sort((a, b) =>
     a.sent.microsSinceUnixEpoch < b.sent.microsSinceUnixEpoch ? -1 : 1
@@ -875,6 +898,25 @@ function ThreadPanel({
   const onSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.trim()) return;
+
+    // /ask <question> — route to the AI bot inside this thread.
+    const trimmed = draft.trim();
+    if (trimmed.toLowerCase().startsWith('/ask ')) {
+      const question = trimmed.slice(5).trim();
+      if (question.length === 0) return;
+      setDraft('');
+      createAskRequest({
+        channelId,
+        threadId: thread.id,
+        question,
+      }).catch(err => {
+        console.error(err);
+        setDraft(trimmed);
+        alert(String(err?.message ?? err));
+      });
+      return;
+    }
+
     const text = draft;
     setDraft('');
     sendMessage({ channelId, threadId: thread.id, replyToId: 0n, text, attachmentUrl: '' })
