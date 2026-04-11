@@ -146,67 +146,101 @@ View live server logs:
 spacetime logs your-database-name
 ```
 
-## Self-hosting with Dokploy
+## Deployment
 
-Omnia ships with a production-ready `docker-compose.yml` designed for
-[Dokploy](https://dokploy.com). It runs three services on your VPS:
-
-| Service | Image / Build | Purpose |
-|---------|---------------|---------|
-| `spacetimedb` | `clockworklabs/spacetime:latest` | Self-hosted SpacetimeDB server (persistent data in a named volume) |
-| `publisher` | Multi-stage build (`publisher` target) | One-shot container that publishes the module on every deploy |
-| `frontend` | Multi-stage build (`runtime` target) | nginx serving the Vite-built SPA |
+Omnia uses [SpacetimeDB maincloud](https://maincloud.spacetimedb.com) as its
+backend, so production deployment only ships the Vite SPA — a single
+container built in CI and served via nginx on [Dokploy](https://dokploy.com).
 
 ### Architecture
 
 ```
-         Traefik (Dokploy-managed)
-              │        │
-   omnia.domain       db.omnia.domain
-              │        │
-        ┌─────┴─┐  ┌───┴────┐
-        │frontend│  │spacetimedb│──► stdb-data (named volume)
-        └────────┘  └───────────┘
-                         ▲
-                   publisher (one-shot, on each deploy)
+  GitHub push → GitHub Actions → GHCR image → Dokploy API → Dokploy pulls & runs
+                                                                │
+                                                                ▼
+                                                          nginx (Vite SPA)
+                                                                │
+                                                                ▼
+                                              SpacetimeDB maincloud (WSS)
 ```
+
+Per [Dokploy's Going Production guide](https://docs.dokploy.com/docs/core/applications/going-production),
+builds happen in CI — never on the production server — to keep the VPS
+lightweight and deployments fast.
 
 ### One-time setup
 
-1. In Dokploy, create a new **Docker Compose** application pointed at this repo.
-2. Go to **Environment** and paste the contents of `.env.docker.example`, replacing the example values with your domains:
-   ```env
-   DOMAIN=chat.yourdomain.com
-   DB_DOMAIN=db.chat.yourdomain.com
-   VITE_SPACETIMEDB_HOST=wss://db.chat.yourdomain.com
-   VITE_SPACETIMEDB_DB_NAME=omnia
-   ```
-3. Point both subdomains' DNS at your Dokploy server.
-4. Deploy. Dokploy will `git clone`, build images, and start the stack. On first boot, the `publisher` container waits for SpacetimeDB's healthcheck, then publishes the module.
-5. Open `https://<DOMAIN>` — Traefik serves the SPA and upgrades WebSocket connections to `<DB_DOMAIN>`.
+**1. GitHub — repository variables** (`Settings → Secrets and variables → Actions → Variables`)
 
-### Why named volumes (not bind mounts)
+| Variable | Example | Baked into the SPA at build time |
+|----------|---------|---|
+| `VITE_SPACETIMEDB_HOST` | `https://maincloud.spacetimedb.com` | ✅ |
+| `VITE_SPACETIMEDB_DB_NAME` | `your-database-name` | ✅ |
 
-Dokploy performs a fresh `git clone` of the repo on every deploy, which wipes any files mounted relative to the repo. The compose file uses a **named Docker volume** (`stdb-data`) for SpacetimeDB data, which survives redeploys and is compatible with Dokploy's **Volume Backups** feature (S3, B2, R2, GCS).
+**2. GitHub — repository secrets** (same page → Secrets)
 
-### Vite env vars are baked at build time
+| Secret | Description |
+|--------|-------------|
+| `DOKPLOY_BASE_URL` | e.g. `https://dokploy.yourhost.com` |
+| `DOKPLOY_API_KEY` | From Dokploy → Profile → API keys |
+| `DOKPLOY_APP_ID` | The application ID from Dokploy |
 
-`VITE_SPACETIMEDB_HOST` and `VITE_SPACETIMEDB_DB_NAME` are compiled into the JS bundle — they're passed as Docker **build args**, not runtime env. If you change them, Dokploy must rebuild the `frontend` image.
+**3. Dokploy — create the application**
 
-### Production recommendation (CI/CD)
+- **Source Type**: Docker
+- **Image**: `ghcr.io/<your-github-user>/<repo>:latest`
+- **Port**: `80`
+- **Domain**: configure in the Domains tab — Dokploy wires up Traefik and Let's Encrypt automatically
+- **Health Check** (Advanced → Swarm Settings):
+  ```json
+  { "Test": ["CMD", "curl", "-f", "http://localhost:80/healthz"],
+    "Interval": 30000000000, "Timeout": 10000000000,
+    "StartPeriod": 10000000000, "Retries": 3 }
+  ```
+- **Update Config** (Advanced → Swarm Settings) for zero-downtime rollouts:
+  ```json
+  { "Parallelism": 1, "Delay": 10000000000,
+    "FailureAction": "rollback", "Order": "start-first" }
+  ```
 
-Per [Dokploy's Going Production guide](https://docs.dokploy.com/docs/core/applications/going-production), building on the production server can starve resources. For high-traffic deployments, build images in CI/CD (GitHub Actions, etc.), push to a registry (GHCR / Docker Hub), and replace the `build:` directives in `docker-compose.yml` with `image:` tags. The compose file is structured so this swap is mechanical.
+### How a deploy works
+
+1. Push to `main` triggers `.github/workflows/deploy.yml`.
+2. GitHub Actions builds the Docker image with `VITE_*` build args and pushes
+   `ghcr.io/<user>/<repo>:latest` and `<sha>` tags to GHCR (cached via `type=gha`).
+3. The workflow calls `POST /api/application.deploy` on Dokploy to trigger a
+   rolling update using the `start-first` strategy, falling back on any
+   healthcheck failure.
+
+### Backend (SpacetimeDB) deployment
+
+The backend module isn't in the Docker image — it's published directly to
+maincloud from your local machine or a separate CI job:
+
+```bash
+bun run spacetime:publish              # publish to maincloud
+bun run spacetime:generate             # regenerate client bindings
+git commit -am "feat: schema change"   # then deploy the frontend
+```
+
+### Why a Dockerfile and not docker-compose
+
+Omnia is a single-image application — there's no database or background
+worker to orchestrate, and the SpacetimeDB runtime is hosted for us. A
+plain Dockerfile lets Dokploy's **Application (Docker)** source type handle
+Traefik labels, TLS, healthchecks, and rolling updates entirely through
+its UI, per Dokploy's production guide.
 
 ### Local smoke test
 
-You can validate the stack on your machine before deploying:
-
 ```bash
-docker compose config   # lint the compose file
-docker compose build    # build all images
-# Add dokploy-network externally so the compose file validates:
-docker network create dokploy-network
-docker compose up -d
+docker build \
+  --build-arg VITE_SPACETIMEDB_HOST=https://maincloud.spacetimedb.com \
+  --build-arg VITE_SPACETIMEDB_DB_NAME=your-database-name \
+  -t omnia:local .
+
+docker run --rm -p 8080:80 omnia:local
+# → http://localhost:8080
 ```
 
 ## License
