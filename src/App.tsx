@@ -12,6 +12,8 @@ import Sidebar from './components/Sidebar';
 import Chat from './components/Chat';
 import Members from './components/Members';
 import UserProfile, { EditProfileModal } from './components/UserProfile';
+import DevAdminModal from './components/DevAdminModal';
+import SuperAdminBanner from './components/SuperAdminBanner';
 import './App.css';
 
 export interface ProfileAnchor {
@@ -84,6 +86,23 @@ export default function App() {
   const [activeProfile, setActiveProfile] = useState<ProfileAnchor | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showMembers, setShowMembers] = useState(true);
+  const [showDevAdmin, setShowDevAdmin] = useState(false);
+
+  // Ctrl/Cmd+Shift+A anywhere opens the Developer Access modal, even for
+  // users who don't currently hold super_admin. This is the recovery path
+  // for wiped databases, lost sessions, or shared-dev access.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.shiftKey && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        setShowDevAdmin(v => !v);
+      } else if (e.key === 'Escape' && showDevAdmin) {
+        setShowDevAdmin(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showDevAdmin]);
 
   const myHex = identity?.toHexString() ?? '';
 
@@ -251,7 +270,11 @@ export default function App() {
     users.find(u => u.identity.toHexString() === myHex) ?? null;
 
   return (
-    <div className={`app ${showMembers ? '' : 'members-hidden'}`}>
+    <>
+      {isSuperAdmin && <SuperAdminBanner />}
+      <div
+        className={`app ${showMembers ? '' : 'members-hidden'} ${isSuperAdmin ? 'sa-active' : ''}`}
+      >
       <Sidebar
         servers={joinedServers}
         channels={serverChannels}
@@ -345,6 +368,13 @@ export default function App() {
           onClose={() => setShowEditProfile(false)}
         />
       )}
-    </div>
+      </div>
+
+      <DevAdminModal
+        open={showDevAdmin}
+        onClose={() => setShowDevAdmin(false)}
+        isSuperAdmin={isSuperAdmin}
+      />
+    </>
   );
 }

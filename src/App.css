@@ -6092,3 +6092,207 @@ a:hover {
   color: var(--text-normal);
 }
 .notif-btn-dismiss:hover { background: var(--bg-modifier-hover, rgba(255,255,255,.16)); }
+
+/* ── Super Admin Mode banner ────────────────────────────────── */
+
+.sa-banner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #b8002e 0%, #e3413d 50%, #b8002e 100%);
+  background-size: 200% 100%;
+  animation: sa-banner-pulse 4s linear infinite;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 2px 12px rgba(184, 0, 46, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+@keyframes sa-banner-pulse {
+  0%   { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+.sa-banner-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  animation: sa-dot-pulse 1.8s ease-in-out infinite;
+}
+@keyframes sa-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+  50%      { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);   }
+}
+.sa-banner-text {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.sa-banner-text strong {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sa-banner-sub {
+  font-size: 12px;
+  opacity: 0.88;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sa-banner-exit {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sa-banner-exit:hover { background: rgba(255, 255, 255, 0.30); }
+.sa-banner-exit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Push the whole app down by the banner height so it doesn't cover the chat. */
+.app.sa-active { height: calc(100vh - 42px); }
+
+/* ── Developer Access modal ─────────────────────────────────── */
+
+.dev-admin-modal {
+  width: 460px;
+  max-width: 95vw;
+  padding: 0;
+  overflow: hidden;
+}
+.dev-admin-header {
+  display: flex;
+  gap: 14px;
+  padding: 20px 22px 16px;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--bg-modifier-accent, rgba(255,255,255,.06));
+}
+.dev-admin-icon {
+  font-size: 30px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.dev-admin-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: var(--text-normal);
+}
+.dev-admin-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.dev-admin-sub code {
+  background: var(--bg-modifier-accent, rgba(255,255,255,.08));
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.dev-admin-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dev-admin-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.dev-admin-input {
+  background: var(--bg-tertiary, #1e1f22);
+  color: var(--text-normal);
+  border: 1px solid var(--bg-modifier-accent, rgba(255,255,255,.1));
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+.dev-admin-input:focus {
+  outline: none;
+  border-color: #5865f2;
+}
+.dev-admin-submit {
+  background: #b8002e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dev-admin-submit:hover:not(:disabled) { background: #9c0027; }
+.dev-admin-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.dev-admin-submit-secondary {
+  background: var(--bg-modifier-accent, rgba(255,255,255,.12));
+  color: var(--text-normal);
+  margin-top: 6px;
+}
+.dev-admin-submit-secondary:hover:not(:disabled) {
+  background: var(--bg-modifier-hover, rgba(255,255,255,.18));
+}
+.dev-admin-help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.dev-admin-notice {
+  padding: 10px 22px;
+  background: rgba(35, 165, 90, 0.14);
+  color: #23a55a;
+  font-size: 13px;
+  border-top: 1px solid rgba(35, 165, 90, 0.25);
+}
+.dev-admin-error {
+  padding: 10px 22px;
+  background: rgba(242, 63, 67, 0.14);
+  color: #f23f43;
+  font-size: 13px;
+  border-top: 1px solid rgba(242, 63, 67, 0.25);
+}
+.dev-admin-rotate {
+  margin-top: 8px;
+  padding: 14px;
+  background: var(--bg-tertiary, rgba(0,0,0,0.15));
+  border-radius: 6px;
+  border: 1px dashed var(--bg-modifier-accent, rgba(255,255,255,.1));
+}
+.dev-admin-rotate h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--text-normal);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dev-admin-rotate p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
