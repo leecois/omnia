@@ -146,6 +146,95 @@ View live server logs:
 spacetime logs your-database-name
 ```
 
+## Admin Impersonation (break-glass dev access)
+
+Omnia ships with a secure "break-glass" mechanism for developers to claim
+`super_admin` privileges on any deployment by entering a shared secret.
+It exists so that:
+
+- You can recover admin rights after a `spacetime publish --delete-data`
+- Multiple developers can share one deployment without giving each of them
+  hardcoded super-admin rows in the module source
+- Every elevation is logged to an append-only audit table that super admins
+  can read live via subscription
+
+### How it works
+
+```
+  Ctrl/Cmd+Shift+A         →  DevAdminModal opens
+  enter shared secret      →  claim_super_admin reducer
+  secret matches           →  super_admin row inserted for your identity
+  SuperAdminBanner appears →  red pulsing banner at top of app
+  click Exit               →  revoke_super_admin_self drops the row
+```
+
+The shared secret lives in a **private** SpacetimeDB table
+(`dev_admin_secret`) that is never synced to any client — it's only ever
+read from within the module when a reducer runs. The plaintext never leaves
+the server.
+
+### Bootstrapping a fresh deployment
+
+1. Publish the module. Someone (anyone) must immediately seed the secret
+   before anyone else races to do it — this is the weak point, but it's a
+   one-time step at deploy time.
+2. Open the frontend → `Ctrl/Cmd+Shift+A` → modal detects the secret
+   isn't seeded yet and switches to "Seed" mode → pick a ≥16-character
+   secret → click **Seed & continue**.
+3. From now on the guard is closed: re-seeding fails.
+
+### Recovering super-admin after a wipe
+
+Same shortcut, same modal, enter the secret in "Claim" mode, done. Your
+identity is added to `super_admin` and the banner flips on.
+
+### Rotating the secret
+
+Open the modal while already super admin → the "Rotate secret" section
+appears below the claim form → enter a new secret → click **Rotate**.
+Future claimers need the new value.
+
+### Rate limiting
+
+`claim_super_admin` counts failed attempts in `dev_admin_audit` over the
+last 60 s. If any single identity accumulates ≥5 failures in that window,
+further attempts are rejected for another minute. This is a simple but
+effective defence against an attacker who discovered the endpoint but
+doesn't have the secret.
+
+### UI indicators
+
+| Element | Where | When |
+|---|---|---|
+| Red/orange sticky banner | Top of the entire app | Whenever your identity has a `super_admin` row |
+| Pulsing white dot | Inside the banner | Always (animation) |
+| **Exit** button | Right side of banner | Confirms, then calls `revoke_super_admin_self` |
+
+### Autonomous verification
+
+`ai-bot/src/verify-admin.ts` exercises all 14 scenarios end-to-end against
+the live database without needing the frontend:
+
+```bash
+cd ai-bot && bun --env-file=../.env.local run src/verify-admin.ts
+```
+
+Prints the full `dev_admin_audit` trail at the end.
+
+### Schema reference
+
+| Table | Visibility | Purpose |
+|---|---|---|
+| `dev_admin_secret` | **private** | Single-row secret holder; never synced to clients |
+| `dev_admin_audit` | public | Append-only log of every action |
+
+| Reducer | Who may call | Notes |
+|---|---|---|
+| `seedDevAdminSecret` | Anyone while table is empty | One-shot bootstrap |
+| `rotateDevAdminSecret` | Super admin only | Re-key the shared secret |
+| `claimSuperAdmin` | Anyone who knows the secret | Rate-limited, idempotent |
+| `revokeSuperAdminSelf` | Current super admin | Drops your own row |
+
 ## AI assistant (`/ask`)
 
 Omnia ships with a RAG-based documentation assistant: type `/ask <question>`
