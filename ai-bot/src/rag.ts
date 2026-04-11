@@ -151,10 +151,14 @@ export class RAGHandler {
     // Call sendMessage reducer. Single-object argument per SpacetimeDB SDK v2.
     // MUST be awaited — reducer calls return Promise<void> and reject if the
     // server-side reducer throws. Unhandled rejections crash the bot.
+    //
+    // The question is already in the channel as a normal message (the
+    // createAskRequest reducer inserted it). We reply TO that message so the
+    // answer renders as a threaded reply in the existing reply-rendering UI.
     await this.conn.reducers.sendMessage({
       channelId: req.channelId,
       threadId: req.threadId,
-      replyToId: 0n,
+      replyToId: req.questionMessageId,
       text: answerText,
       attachmentUrl: '',
     });

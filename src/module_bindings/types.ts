@@ -47,6 +47,7 @@ export const AskRequest = __t.object("AskRequest", {
   errorMessage: __t.string(),
   createdAt: __t.timestamp(),
   answeredAt: __t.timestamp(),
+  questionMessageId: __t.u64(),
 });
 export type AskRequest = __Infer<typeof AskRequest>;
 

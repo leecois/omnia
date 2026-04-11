@@ -432,6 +432,11 @@ const ask_request = table(
     errorMessage: t.string(),         // populated on 'failed'
     createdAt: t.timestamp(),
     answeredAt: t.timestamp(),        // epoch 0 until answered
+    // Appended — additive migration for existing deployments.
+    // The ID of the message that holds the user's question. The bot
+    // uses this as replyToId when posting the answer so the
+    // conversation reads as a proper Q→A reply chain.
+    questionMessageId: t.u64().default(0n),
   }
 );
 
@@ -1802,6 +1807,29 @@ export const create_ask_request = spacetimedb.reducer(
       throw new SenderError('You are not a member of this server');
     }
 
+    // Post the question as a real message in the channel so:
+    //   1. Everyone can see what was asked (not just the asker)
+    //   2. The bot's answer can reply to it via replyToId
+    const questionMsg = ctx.db.message.insert({
+      id: 0n,
+      channelId,
+      threadId,
+      replyToId: 0n,
+      authorId: ctx.sender,
+      text: q,
+      attachmentUrl: '',
+      pinned: false,
+      sent: ctx.timestamp,
+      editedAt: undefined,
+    });
+
+    // Bump the channel's lastMessageId so unread badges and UI state stay
+    // consistent with what a normal send_message call would do.
+    ctx.db.channel.id.update({
+      ...channelRow,
+      lastMessageId: questionMsg.id,
+    });
+
     // answeredAt is initialised to ctx.timestamp; the bot overwrites it on
     // resolve. `status` is the authoritative "is this answered" indicator.
     ctx.db.ask_request.insert({
@@ -1816,6 +1844,7 @@ export const create_ask_request = spacetimedb.reducer(
       errorMessage: '',
       createdAt: ctx.timestamp,
       answeredAt: ctx.timestamp,
+      questionMessageId: questionMsg.id,
     });
   }
 );

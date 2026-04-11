@@ -22,4 +22,5 @@ export default __t.row({
   errorMessage: __t.string().name("error_message"),
   createdAt: __t.timestamp().name("created_at"),
   answeredAt: __t.timestamp().name("answered_at"),
+  questionMessageId: __t.u64().name("question_message_id"),
 });
