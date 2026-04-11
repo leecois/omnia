@@ -72,6 +72,23 @@ export const Channel = __t.object("Channel", {
 });
 export type Channel = __Infer<typeof Channel>;
 
+export const DevAdminAudit = __t.object("DevAdminAudit", {
+  id: __t.u64(),
+  userIdentity: __t.identity(),
+  action: __t.string(),
+  success: __t.bool(),
+  detail: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type DevAdminAudit = __Infer<typeof DevAdminAudit>;
+
+export const DevAdminSecret = __t.object("DevAdminSecret", {
+  id: __t.u64(),
+  secret: __t.string(),
+  updatedAt: __t.timestamp(),
+});
+export type DevAdminSecret = __Infer<typeof DevAdminSecret>;
+
 export const Invite = __t.object("Invite", {
   id: __t.u64(),
   code: __t.string(),

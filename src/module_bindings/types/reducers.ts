@@ -7,6 +7,7 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import AssignRoleReducer from "../assign_role_reducer";
+import ClaimSuperAdminReducer from "../claim_super_admin_reducer";
 import CreateAskRequestReducer from "../create_ask_request_reducer";
 import CreateCategoryReducer from "../create_category_reducer";
 import CreateChannelReducer from "../create_channel_reducer";
@@ -35,6 +36,9 @@ import ReseedDefaultServerReducer from "../reseed_default_server_reducer";
 import ResolveAskRequestReducer from "../resolve_ask_request_reducer";
 import RevokeSpecialRoleReducer from "../revoke_special_role_reducer";
 import RevokeSuperAdminReducer from "../revoke_super_admin_reducer";
+import RevokeSuperAdminSelfReducer from "../revoke_super_admin_self_reducer";
+import RotateDevAdminSecretReducer from "../rotate_dev_admin_secret_reducer";
+import SeedDevAdminSecretReducer from "../seed_dev_admin_secret_reducer";
 import SendMessageReducer from "../send_message_reducer";
 import SendServerInviteReducer from "../send_server_invite_reducer";
 import SetMemberRoleReducer from "../set_member_role_reducer";
@@ -55,6 +59,7 @@ import UpdateRoleReducer from "../update_role_reducer";
 import UpdateServerReducer from "../update_server_reducer";
 
 export type AssignRoleParams = __Infer<typeof AssignRoleReducer>;
+export type ClaimSuperAdminParams = __Infer<typeof ClaimSuperAdminReducer>;
 export type CreateAskRequestParams = __Infer<typeof CreateAskRequestReducer>;
 export type CreateCategoryParams = __Infer<typeof CreateCategoryReducer>;
 export type CreateChannelParams = __Infer<typeof CreateChannelReducer>;
@@ -83,6 +88,9 @@ export type ReseedDefaultServerParams = __Infer<typeof ReseedDefaultServerReduce
 export type ResolveAskRequestParams = __Infer<typeof ResolveAskRequestReducer>;
 export type RevokeSpecialRoleParams = __Infer<typeof RevokeSpecialRoleReducer>;
 export type RevokeSuperAdminParams = __Infer<typeof RevokeSuperAdminReducer>;
+export type RevokeSuperAdminSelfParams = __Infer<typeof RevokeSuperAdminSelfReducer>;
+export type RotateDevAdminSecretParams = __Infer<typeof RotateDevAdminSecretReducer>;
+export type SeedDevAdminSecretParams = __Infer<typeof SeedDevAdminSecretReducer>;
 export type SendMessageParams = __Infer<typeof SendMessageReducer>;
 export type SendServerInviteParams = __Infer<typeof SendServerInviteReducer>;
 export type SetMemberRoleParams = __Infer<typeof SetMemberRoleReducer>;

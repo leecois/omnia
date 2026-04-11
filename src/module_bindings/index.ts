@@ -35,6 +35,7 @@ import {
 
 // Import all reducer arg schemas
 import AssignRoleReducer from "./assign_role_reducer";
+import ClaimSuperAdminReducer from "./claim_super_admin_reducer";
 import CreateAskRequestReducer from "./create_ask_request_reducer";
 import CreateCategoryReducer from "./create_category_reducer";
 import CreateChannelReducer from "./create_channel_reducer";
@@ -63,6 +64,9 @@ import ReseedDefaultServerReducer from "./reseed_default_server_reducer";
 import ResolveAskRequestReducer from "./resolve_ask_request_reducer";
 import RevokeSpecialRoleReducer from "./revoke_special_role_reducer";
 import RevokeSuperAdminReducer from "./revoke_super_admin_reducer";
+import RevokeSuperAdminSelfReducer from "./revoke_super_admin_self_reducer";
+import RotateDevAdminSecretReducer from "./rotate_dev_admin_secret_reducer";
+import SeedDevAdminSecretReducer from "./seed_dev_admin_secret_reducer";
 import SendMessageReducer from "./send_message_reducer";
 import SendServerInviteReducer from "./send_server_invite_reducer";
 import SetMemberRoleReducer from "./set_member_role_reducer";
@@ -90,6 +94,7 @@ import AiConfigRow from "./ai_config_table";
 import AskRequestRow from "./ask_request_table";
 import CategoryRow from "./category_table";
 import ChannelRow from "./channel_table";
+import DevAdminAuditRow from "./dev_admin_audit_table";
 import InviteRow from "./invite_table";
 import MemberRoleRow from "./member_role_table";
 import MessageRow from "./message_table";
@@ -180,6 +185,20 @@ const tablesSchema = __schema({
       { name: 'channel_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ChannelRow),
+  dev_admin_audit: __table({
+    name: 'dev_admin_audit',
+    indexes: [
+      { accessor: 'id', name: 'dev_admin_audit_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'byUser', name: 'dev_admin_audit_user_identity_idx_btree', algorithm: 'btree', columns: [
+        'userIdentity',
+      ] },
+    ],
+    constraints: [
+      { name: 'dev_admin_audit_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, DevAdminAuditRow),
   invite: __table({
     name: 'invite',
     indexes: [
@@ -397,6 +416,7 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("assign_role", AssignRoleReducer),
+  __reducerSchema("claim_super_admin", ClaimSuperAdminReducer),
   __reducerSchema("create_ask_request", CreateAskRequestReducer),
   __reducerSchema("create_category", CreateCategoryReducer),
   __reducerSchema("create_channel", CreateChannelReducer),
@@ -425,6 +445,9 @@ const reducersSchema = __reducers(
   __reducerSchema("resolve_ask_request", ResolveAskRequestReducer),
   __reducerSchema("revoke_special_role", RevokeSpecialRoleReducer),
   __reducerSchema("revoke_super_admin", RevokeSuperAdminReducer),
+  __reducerSchema("revoke_super_admin_self", RevokeSuperAdminSelfReducer),
+  __reducerSchema("rotate_dev_admin_secret", RotateDevAdminSecretReducer),
+  __reducerSchema("seed_dev_admin_secret", SeedDevAdminSecretReducer),
   __reducerSchema("send_message", SendMessageReducer),
   __reducerSchema("send_server_invite", SendServerInviteReducer),
   __reducerSchema("set_member_role", SetMemberRoleReducer),
