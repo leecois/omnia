@@ -10,6 +10,46 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const AiAudit = __t.object("AiAudit", {
+  id: __t.u64(),
+  userIdentity: __t.identity(),
+  serverId: __t.u64(),
+  feature: __t.string(),
+  inputTokens: __t.u32(),
+  outputTokens: __t.u32(),
+  costMicros: __t.u64(),
+  createdAt: __t.timestamp(),
+});
+export type AiAudit = __Infer<typeof AiAudit>;
+
+export const AiConfig = __t.object("AiConfig", {
+  serverId: __t.u64(),
+  enabled: __t.bool(),
+  askEnabled: __t.bool(),
+  summarizeEnabled: __t.bool(),
+  monthlyTokenBudget: __t.u64(),
+  tokensUsedThisMonth: __t.u64(),
+  sourceChannelIds: __t.string(),
+  createdAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type AiConfig = __Infer<typeof AiConfig>;
+
+export const AskRequest = __t.object("AskRequest", {
+  id: __t.u64(),
+  serverId: __t.u64(),
+  channelId: __t.u64(),
+  threadId: __t.u64(),
+  userIdentity: __t.identity(),
+  question: __t.string(),
+  status: __t.string(),
+  answerMessageId: __t.u64(),
+  errorMessage: __t.string(),
+  createdAt: __t.timestamp(),
+  answeredAt: __t.timestamp(),
+});
+export type AskRequest = __Infer<typeof AskRequest>;
+
 export const Category = __t.object("Category", {
   id: __t.u64(),
   serverId: __t.u64(),

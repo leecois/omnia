@@ -35,6 +35,7 @@ import {
 
 // Import all reducer arg schemas
 import AssignRoleReducer from "./assign_role_reducer";
+import CreateAskRequestReducer from "./create_ask_request_reducer";
 import CreateCategoryReducer from "./create_category_reducer";
 import CreateChannelReducer from "./create_channel_reducer";
 import CreateInviteReducer from "./create_invite_reducer";
@@ -49,6 +50,8 @@ import DeleteRoleReducer from "./delete_role_reducer";
 import DeleteServerReducer from "./delete_server_reducer";
 import DismissNotificationReducer from "./dismiss_notification_reducer";
 import EditMessageReducer from "./edit_message_reducer";
+import EnsureAiConfigReducer from "./ensure_ai_config_reducer";
+import FailAskRequestReducer from "./fail_ask_request_reducer";
 import GrantSpecialRoleReducer from "./grant_special_role_reducer";
 import GrantSuperAdminReducer from "./grant_super_admin_reducer";
 import JoinServerReducer from "./join_server_reducer";
@@ -57,6 +60,7 @@ import LeaveServerReducer from "./leave_server_reducer";
 import MoveChannelReducer from "./move_channel_reducer";
 import PinMessageReducer from "./pin_message_reducer";
 import ReseedDefaultServerReducer from "./reseed_default_server_reducer";
+import ResolveAskRequestReducer from "./resolve_ask_request_reducer";
 import RevokeSpecialRoleReducer from "./revoke_special_role_reducer";
 import RevokeSuperAdminReducer from "./revoke_super_admin_reducer";
 import SendMessageReducer from "./send_message_reducer";
@@ -71,6 +75,7 @@ import SetTypingReducer from "./set_typing_reducer";
 import ToggleReactionReducer from "./toggle_reaction_reducer";
 import UnassignRoleReducer from "./unassign_role_reducer";
 import UnpinMessageReducer from "./unpin_message_reducer";
+import UpdateAiConfigReducer from "./update_ai_config_reducer";
 import UpdateCategoryReducer from "./update_category_reducer";
 import UpdateChannelReducer from "./update_channel_reducer";
 import UpdateReadStateReducer from "./update_read_state_reducer";
@@ -80,6 +85,9 @@ import UpdateServerReducer from "./update_server_reducer";
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import AiAuditRow from "./ai_audit_table";
+import AiConfigRow from "./ai_config_table";
+import AskRequestRow from "./ask_request_table";
 import CategoryRow from "./category_table";
 import ChannelRow from "./channel_table";
 import InviteRow from "./invite_table";
@@ -102,6 +110,48 @@ import UserRow from "./user_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  ai_audit: __table({
+    name: 'ai_audit',
+    indexes: [
+      { accessor: 'id', name: 'ai_audit_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'byUser', name: 'ai_audit_user_identity_idx_btree', algorithm: 'btree', columns: [
+        'userIdentity',
+      ] },
+    ],
+    constraints: [
+      { name: 'ai_audit_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AiAuditRow),
+  ai_config: __table({
+    name: 'ai_config',
+    indexes: [
+      { accessor: 'serverId', name: 'ai_config_server_id_idx_btree', algorithm: 'btree', columns: [
+        'serverId',
+      ] },
+    ],
+    constraints: [
+      { name: 'ai_config_server_id_key', constraint: 'unique', columns: ['serverId'] },
+    ],
+  }, AiConfigRow),
+  ask_request: __table({
+    name: 'ask_request',
+    indexes: [
+      { accessor: 'byChannel', name: 'ask_request_channel_id_idx_btree', algorithm: 'btree', columns: [
+        'channelId',
+      ] },
+      { accessor: 'id', name: 'ask_request_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'byStatus', name: 'ask_request_status_idx_btree', algorithm: 'btree', columns: [
+        'status',
+      ] },
+    ],
+    constraints: [
+      { name: 'ask_request_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AskRequestRow),
   category: __table({
     name: 'category',
     indexes: [
@@ -347,6 +397,7 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("assign_role", AssignRoleReducer),
+  __reducerSchema("create_ask_request", CreateAskRequestReducer),
   __reducerSchema("create_category", CreateCategoryReducer),
   __reducerSchema("create_channel", CreateChannelReducer),
   __reducerSchema("create_invite", CreateInviteReducer),
@@ -361,6 +412,8 @@ const reducersSchema = __reducers(
   __reducerSchema("delete_server", DeleteServerReducer),
   __reducerSchema("dismiss_notification", DismissNotificationReducer),
   __reducerSchema("edit_message", EditMessageReducer),
+  __reducerSchema("ensure_ai_config", EnsureAiConfigReducer),
+  __reducerSchema("fail_ask_request", FailAskRequestReducer),
   __reducerSchema("grant_special_role", GrantSpecialRoleReducer),
   __reducerSchema("grant_super_admin", GrantSuperAdminReducer),
   __reducerSchema("join_server", JoinServerReducer),
@@ -369,6 +422,7 @@ const reducersSchema = __reducers(
   __reducerSchema("move_channel", MoveChannelReducer),
   __reducerSchema("pin_message", PinMessageReducer),
   __reducerSchema("reseed_default_server", ReseedDefaultServerReducer),
+  __reducerSchema("resolve_ask_request", ResolveAskRequestReducer),
   __reducerSchema("revoke_special_role", RevokeSpecialRoleReducer),
   __reducerSchema("revoke_super_admin", RevokeSuperAdminReducer),
   __reducerSchema("send_message", SendMessageReducer),
@@ -383,6 +437,7 @@ const reducersSchema = __reducers(
   __reducerSchema("toggle_reaction", ToggleReactionReducer),
   __reducerSchema("unassign_role", UnassignRoleReducer),
   __reducerSchema("unpin_message", UnpinMessageReducer),
+  __reducerSchema("update_ai_config", UpdateAiConfigReducer),
   __reducerSchema("update_category", UpdateCategoryReducer),
   __reducerSchema("update_channel", UpdateChannelReducer),
   __reducerSchema("update_read_state", UpdateReadStateReducer),
