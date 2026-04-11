@@ -1,0 +1,69 @@
+# Dependencies (install fresh inside the builder)
+node_modules
+**/node_modules
+.pnp
+.pnp.*
+.yarn
+
+# Build artifacts — image builds them from source
+dist
+dist-ssr
+build
+out
+spacetimedb/dist
+spacetimedb/target
+
+# Test coverage
+coverage
+*.lcov
+.nyc_output
+
+# VCS
+.git
+.gitignore
+.gitattributes
+.github
+
+# Environment / secrets (passed explicitly as build args)
+.env
+.env.*
+!.env.docker.example
+
+# Local tooling / editor metadata
+.vscode
+.idea
+.cursor
+.omc
+.windsurfrules
+.history
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript build info
+*.tsbuildinfo
+.tsbuildinfo
+
+# Documentation we don't want in the image
+README.md
+CHANGELOG.md
+CLAUDE.md
+AGENTS.md
+
+# Docker meta — the compose file isn't needed inside the image
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+.dockerignore
