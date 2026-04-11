@@ -146,6 +146,69 @@ View live server logs:
 spacetime logs your-database-name
 ```
 
+## Self-hosting with Dokploy
+
+Omnia ships with a production-ready `docker-compose.yml` designed for
+[Dokploy](https://dokploy.com). It runs three services on your VPS:
+
+| Service | Image / Build | Purpose |
+|---------|---------------|---------|
+| `spacetimedb` | `clockworklabs/spacetime:latest` | Self-hosted SpacetimeDB server (persistent data in a named volume) |
+| `publisher` | Multi-stage build (`publisher` target) | One-shot container that publishes the module on every deploy |
+| `frontend` | Multi-stage build (`runtime` target) | nginx serving the Vite-built SPA |
+
+### Architecture
+
+```
+         Traefik (Dokploy-managed)
+              │        │
+   omnia.domain       db.omnia.domain
+              │        │
+        ┌─────┴─┐  ┌───┴────┐
+        │frontend│  │spacetimedb│──► stdb-data (named volume)
+        └────────┘  └───────────┘
+                         ▲
+                   publisher (one-shot, on each deploy)
+```
+
+### One-time setup
+
+1. In Dokploy, create a new **Docker Compose** application pointed at this repo.
+2. Go to **Environment** and paste the contents of `.env.docker.example`, replacing the example values with your domains:
+   ```env
+   DOMAIN=chat.yourdomain.com
+   DB_DOMAIN=db.chat.yourdomain.com
+   VITE_SPACETIMEDB_HOST=wss://db.chat.yourdomain.com
+   VITE_SPACETIMEDB_DB_NAME=omnia
+   ```
+3. Point both subdomains' DNS at your Dokploy server.
+4. Deploy. Dokploy will `git clone`, build images, and start the stack. On first boot, the `publisher` container waits for SpacetimeDB's healthcheck, then publishes the module.
+5. Open `https://<DOMAIN>` — Traefik serves the SPA and upgrades WebSocket connections to `<DB_DOMAIN>`.
+
+### Why named volumes (not bind mounts)
+
+Dokploy performs a fresh `git clone` of the repo on every deploy, which wipes any files mounted relative to the repo. The compose file uses a **named Docker volume** (`stdb-data`) for SpacetimeDB data, which survives redeploys and is compatible with Dokploy's **Volume Backups** feature (S3, B2, R2, GCS).
+
+### Vite env vars are baked at build time
+
+`VITE_SPACETIMEDB_HOST` and `VITE_SPACETIMEDB_DB_NAME` are compiled into the JS bundle — they're passed as Docker **build args**, not runtime env. If you change them, Dokploy must rebuild the `frontend` image.
+
+### Production recommendation (CI/CD)
+
+Per [Dokploy's Going Production guide](https://docs.dokploy.com/docs/core/applications/going-production), building on the production server can starve resources. For high-traffic deployments, build images in CI/CD (GitHub Actions, etc.), push to a registry (GHCR / Docker Hub), and replace the `build:` directives in `docker-compose.yml` with `image:` tags. The compose file is structured so this swap is mechanical.
+
+### Local smoke test
+
+You can validate the stack on your machine before deploying:
+
+```bash
+docker compose config   # lint the compose file
+docker compose build    # build all images
+# Add dokploy-network externally so the compose file validates:
+docker network create dokploy-network
+docker compose up -d
+```
+
 ## License
 
 ISC
