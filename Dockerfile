@@ -2,33 +2,35 @@
 
 # =============================================================================
 #  Omnia — multi-stage Dockerfile
-#  Targets:
-#    - builder   : installs deps & builds the Vite SPA with Bun
-#    - runtime   : nginx serving the built SPA (default target)
-#    - publisher : one-shot container that publishes the SpacetimeDB module
 #
-#  Build examples:
-#    docker build --target runtime   -t omnia-frontend .
-#    docker build --target publisher -t omnia-publisher .
+#  This repo only ships the Vite SPA as a container. The SpacetimeDB backend
+#  runs on SpacetimeDB maincloud (https://maincloud.spacetimedb.com) and is
+#  published via `bun run spacetime:publish` from CI or locally — NOT from
+#  inside this image.
+#
+#  Stages:
+#    1. builder — Bun + Vite build
+#    2. runtime — nginx serving the built SPA (final target)
 # =============================================================================
 
 
 # -----------------------------------------------------------------------------
-# Stage 1: builder — Bun + Vite production build
+# Stage 1: builder
 # -----------------------------------------------------------------------------
-FROM oven/bun:1.1-alpine AS builder
+FROM oven/bun:1.2-alpine AS builder
 
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies first for optimal layer caching.
-# Only invalidated when package.json or bun.lock change.
+# Install dependencies first — cached until package.json or bun.lock changes.
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
-# Copy source and build.
+# Copy full source.
 COPY . .
 
-# Vite bakes VITE_* env vars at build time; pass them in via build args.
+# Vite bakes VITE_* env vars at build time — pass them as build args.
 ARG VITE_SPACETIMEDB_HOST
 ARG VITE_SPACETIMEDB_DB_NAME
 ENV VITE_SPACETIMEDB_HOST=${VITE_SPACETIMEDB_HOST}
@@ -38,19 +40,20 @@ RUN bun run build
 
 
 # -----------------------------------------------------------------------------
-# Stage 2: runtime — nginx serving the SPA
+# Stage 2: runtime — nginx serving the built SPA
 # -----------------------------------------------------------------------------
 FROM nginx:1.27-alpine AS runtime
 
-# Drop default nginx config and install ours
+RUN apk add --no-cache curl
+
+# Replace the default nginx config with ours (SPA fallback, gzip, caching).
 RUN rm /etc/nginx/conf.d/default.conf
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built assets only — no source, no node_modules
+# Ship only the built assets — no source, no node_modules, no secrets.
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Run as non-root for defense-in-depth
-# (nginx image already ships a 'nginx' user)
+# Run nginx as a non-root user (image already has the 'nginx' user).
 RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx \
   && touch /var/run/nginx.pid \
   && chown nginx:nginx /var/run/nginx.pid
@@ -58,27 +61,6 @@ RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx \
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1
+  CMD curl -fsS http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
-
-
-# -----------------------------------------------------------------------------
-# Stage 3: publisher — one-shot SpacetimeDB module publisher
-# -----------------------------------------------------------------------------
-# Pinned to the same major version the client SDK targets (2.x)
-FROM clockworklabs/spacetime:latest AS publisher
-
-WORKDIR /module
-
-# Copy only the backend module (keeps image small, avoids frontend leakage)
-COPY spacetimedb ./spacetimedb
-
-# The clockworklabs image sets ENTRYPOINT to the spacetime binary.
-# Override with a shell so we can expand ${SPACETIMEDB_DB_NAME} at runtime
-# and republish the module on every container start.
-ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["spacetime publish \"$SPACETIMEDB_DB_NAME\" \
-      --module-path /module/spacetimedb \
-      --server http://spacetimedb:3000 \
-      -y"]

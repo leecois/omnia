@@ -10,8 +10,11 @@ dist
 dist-ssr
 build
 out
-spacetimedb/dist
-spacetimedb/target
+
+# Backend module — NOT needed by the frontend image. The SpacetimeDB
+# module is published to maincloud from CI (bun run spacetime:publish),
+# not baked into this container.
+spacetimedb
 
 # Test coverage
 coverage
@@ -27,7 +30,6 @@ coverage
 # Environment / secrets (passed explicitly as build args)
 .env
 .env.*
-!.env.docker.example
 
 # Local tooling / editor metadata
 .vscode
