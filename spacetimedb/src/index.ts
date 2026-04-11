@@ -369,6 +369,97 @@ const notification = table(
   }
 );
 
+// ─── AI / RAG tables ────────────────────────────────────────────────────────
+//
+// The bot runs as a separate Node.js sidecar that connects to SpacetimeDB as
+// a regular user. It owns the vector index (Qdrant) and all LLM calls.
+// These tables are the async handshake between the frontend and the bot:
+//
+//   1. Frontend calls  create_ask_request → row with status='pending'
+//   2. Bot subscribes to ask_request, picks up pending rows
+//   3. Bot runs RAG (Qdrant + LLM), posts an answer message
+//   4. Bot calls resolve_ask_request → row flipped to 'answered'
+//   5. Frontend sees the status change via live subscription
+//
+// Per-server AI config lets admins enable/disable and cap token spend.
+
+const ai_config = table(
+  { name: 'ai_config', public: true },
+  {
+    serverId: t.u64().primaryKey(),
+    enabled: t.bool(),
+    askEnabled: t.bool(),
+    summarizeEnabled: t.bool(),
+    monthlyTokenBudget: t.u64(),      // 0 = unlimited
+    tokensUsedThisMonth: t.u64(),
+    // Which channels the bot should index as "docs" sources.
+    // Stored as a comma-separated list of channel IDs to stay schema-simple.
+    // Empty string = all channels in the server.
+    sourceChannelIds: t.string(),
+    createdAt: t.timestamp(),
+    updatedAt: t.timestamp(),
+  }
+);
+
+const ask_request = table(
+  {
+    name: 'ask_request',
+    public: true,
+    indexes: [
+      {
+        accessor: 'byStatus',
+        name: 'ask_request_status',
+        algorithm: 'btree',
+        columns: ['status'],
+      },
+      {
+        accessor: 'byChannel',
+        name: 'ask_request_channel',
+        algorithm: 'btree',
+        columns: ['channelId'],
+      },
+    ],
+  },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    serverId: t.u64(),
+    channelId: t.u64(),
+    threadId: t.u64(),                // 0n = channel-level, non-zero = inside a thread
+    userIdentity: t.identity(),
+    question: t.string(),
+    status: t.string(),               // 'pending' | 'answered' | 'failed'
+    answerMessageId: t.u64(),         // 0n until answered
+    errorMessage: t.string(),         // populated on 'failed'
+    createdAt: t.timestamp(),
+    answeredAt: t.timestamp(),        // epoch 0 until answered
+  }
+);
+
+const ai_audit = table(
+  {
+    name: 'ai_audit',
+    public: true,
+    indexes: [
+      {
+        accessor: 'byUser',
+        name: 'ai_audit_user',
+        algorithm: 'btree',
+        columns: ['userIdentity'],
+      },
+    ],
+  },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    userIdentity: t.identity(),
+    serverId: t.u64(),
+    feature: t.string(),              // 'ask' | 'summarize' | 'search'
+    inputTokens: t.u32(),
+    outputTokens: t.u32(),
+    costMicros: t.u64(),              // USD cost × 1_000_000 (keeps it an integer)
+    createdAt: t.timestamp(),
+  }
+);
+
 const spacetimedb = schema({
   user,
   server,
@@ -387,6 +478,9 @@ const spacetimedb = schema({
   server_role,
   member_role,
   notification,
+  ai_config,
+  ask_request,
+  ai_audit,
 });
 export default spacetimedb;
 
@@ -1596,6 +1690,195 @@ export const dismiss_notification = spacetimedb.reducer(
       throw new SenderError('Not your notification');
     }
     ctx.db.notification.id.delete(notificationId);
+  }
+);
+
+// ============================================================================
+// AI / RAG reducers
+// ============================================================================
+
+// Idempotent — creates a default ai_config row for a server if one doesn't
+// exist yet. Callable by anyone in the server; the bot uses this on startup
+// to make sure every server has a config row to read.
+export const ensure_ai_config = spacetimedb.reducer(
+  { serverId: t.u64() },
+  (ctx, { serverId }) => {
+    const existing = ctx.db.ai_config.serverId.find(serverId);
+    if (existing) return;
+    const srv = ctx.db.server.id.find(serverId);
+    if (!srv) throw new SenderError('Server not found');
+    ctx.db.ai_config.insert({
+      serverId,
+      enabled: false,
+      askEnabled: false,
+      summarizeEnabled: false,
+      monthlyTokenBudget: 0n,
+      tokensUsedThisMonth: 0n,
+      sourceChannelIds: '',
+      createdAt: ctx.timestamp,
+      updatedAt: ctx.timestamp,
+    });
+  }
+);
+
+// Admin-only — update AI feature flags and token budget for a server.
+// Server owners, Administrators (bitflag), and Super Admins may call this.
+export const update_ai_config = spacetimedb.reducer(
+  {
+    serverId: t.u64(),
+    enabled: t.bool(),
+    askEnabled: t.bool(),
+    summarizeEnabled: t.bool(),
+    monthlyTokenBudget: t.u64(),
+    sourceChannelIds: t.string(),
+  },
+  (ctx, { serverId, enabled, askEnabled, summarizeEnabled, monthlyTokenBudget, sourceChannelIds }) => {
+    const srv = ctx.db.server.id.find(serverId);
+    if (!srv) throw new SenderError('Server not found');
+
+    const isOwner = (srv.ownerId as { toHexString(): string }).toHexString() ===
+      ctx.sender.toHexString();
+    const perms = getMemberPermissions(ctx, serverId, ctx.sender);
+    if (!isOwner && !hasPerm(perms, PERM_MANAGE_SERVER) && !isSuperAdmin(ctx, ctx.sender)) {
+      throw new SenderError('Only server admins may update AI config');
+    }
+
+    const existing = ctx.db.ai_config.serverId.find(serverId);
+    if (existing) {
+      ctx.db.ai_config.serverId.update({
+        ...existing,
+        enabled,
+        askEnabled,
+        summarizeEnabled,
+        monthlyTokenBudget,
+        sourceChannelIds,
+        updatedAt: ctx.timestamp,
+      });
+    } else {
+      ctx.db.ai_config.insert({
+        serverId,
+        enabled,
+        askEnabled,
+        summarizeEnabled,
+        monthlyTokenBudget,
+        tokensUsedThisMonth: 0n,
+        sourceChannelIds,
+        createdAt: ctx.timestamp,
+        updatedAt: ctx.timestamp,
+      });
+    }
+  }
+);
+
+// Called by the frontend when a user types /ask <question>. Creates a
+// pending ask_request row that the sidecar bot picks up via subscription.
+export const create_ask_request = spacetimedb.reducer(
+  {
+    channelId: t.u64(),
+    threadId: t.u64(),
+    question: t.string(),
+  },
+  (ctx, { channelId, threadId, question }) => {
+    const q = question.trim();
+    if (q.length === 0) throw new SenderError('Question cannot be empty');
+    if (q.length > 2000) throw new SenderError('Question too long (max 2000 chars)');
+
+    const channelRow = ctx.db.channel.id.find(channelId);
+    if (!channelRow) throw new SenderError('Channel not found');
+    const serverId = channelRow.serverId as bigint;
+
+    // Require the server to have opted into AI and enabled the /ask feature.
+    const cfg = ctx.db.ai_config.serverId.find(serverId);
+    if (!cfg || !cfg.enabled || !cfg.askEnabled) {
+      throw new SenderError('AI assistant is not enabled on this server');
+    }
+    if (cfg.monthlyTokenBudget > 0n && cfg.tokensUsedThisMonth >= cfg.monthlyTokenBudget) {
+      throw new SenderError('Monthly AI token budget exhausted');
+    }
+
+    // Require the user to be a member of the server and able to view channels.
+    const perms = getMemberPermissions(ctx, serverId, ctx.sender);
+    if (!hasPerm(perms, PERM_VIEW_CHANNELS) && !isSuperAdmin(ctx, ctx.sender)) {
+      throw new SenderError('You are not a member of this server');
+    }
+
+    // answeredAt is initialised to ctx.timestamp; the bot overwrites it on
+    // resolve. `status` is the authoritative "is this answered" indicator.
+    ctx.db.ask_request.insert({
+      id: 0n,
+      serverId,
+      channelId,
+      threadId,
+      userIdentity: ctx.sender,
+      question: q,
+      status: 'pending',
+      answerMessageId: 0n,
+      errorMessage: '',
+      createdAt: ctx.timestamp,
+      answeredAt: ctx.timestamp,
+    });
+  }
+);
+
+// Called by the bot after it has successfully generated and posted an answer.
+// Updates the ask_request row and writes an audit row capturing token usage.
+export const resolve_ask_request = spacetimedb.reducer(
+  {
+    requestId: t.u64(),
+    answerMessageId: t.u64(),
+    inputTokens: t.u32(),
+    outputTokens: t.u32(),
+    costMicros: t.u64(),
+  },
+  (ctx, { requestId, answerMessageId, inputTokens, outputTokens, costMicros }) => {
+    const req = ctx.db.ask_request.id.find(requestId);
+    if (!req) throw new SenderError('ask_request not found');
+    if (req.status !== 'pending') throw new SenderError('ask_request already resolved');
+
+    ctx.db.ask_request.id.update({
+      ...req,
+      status: 'answered',
+      answerMessageId,
+      answeredAt: ctx.timestamp,
+    });
+
+    ctx.db.ai_audit.insert({
+      id: 0n,
+      userIdentity: req.userIdentity,
+      serverId: req.serverId,
+      feature: 'ask',
+      inputTokens,
+      outputTokens,
+      costMicros,
+      createdAt: ctx.timestamp,
+    });
+
+    // Charge tokens against the server's monthly budget.
+    const cfg = ctx.db.ai_config.serverId.find(req.serverId);
+    if (cfg) {
+      ctx.db.ai_config.serverId.update({
+        ...cfg,
+        tokensUsedThisMonth: cfg.tokensUsedThisMonth + BigInt(inputTokens) + BigInt(outputTokens),
+        updatedAt: ctx.timestamp,
+      });
+    }
+  }
+);
+
+// Called by the bot when RAG / LLM fails. Marks the request as failed
+// so the UI can surface the error instead of hanging.
+export const fail_ask_request = spacetimedb.reducer(
+  { requestId: t.u64(), errorMessage: t.string() },
+  (ctx, { requestId, errorMessage }) => {
+    const req = ctx.db.ask_request.id.find(requestId);
+    if (!req) throw new SenderError('ask_request not found');
+    if (req.status !== 'pending') return;
+    ctx.db.ask_request.id.update({
+      ...req,
+      status: 'failed',
+      errorMessage: errorMessage.slice(0, 500),
+      answeredAt: ctx.timestamp,
+    });
   }
 );
 
