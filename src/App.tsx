@@ -91,13 +91,16 @@ export default function App() {
   // Ctrl/Cmd+Shift+A anywhere opens the Developer Access modal, even for
   // users who don't currently hold super_admin. This is the recovery path
   // for wiped databases, lost sessions, or shared-dev access.
-  // Escape handling lives inside DevAdminModal so its focus trap owns
-  // keyboard lifecycle in one place.
+  //
+  // The shortcut is open-only — pressing it while the modal is already
+  // open does nothing. Closing goes through the Escape/backdrop/Close-btn
+  // paths, all of which are owned by DevAdminModal and run the focus
+  // restoration logic in one place.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.shiftKey && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
-        setShowDevAdmin(v => !v);
+        setShowDevAdmin(true);
       }
     };
     window.addEventListener('keydown', onKey);

@@ -44,19 +44,37 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
   const seedDevAdminSecret = useReducer(reducers.seedDevAdminSecret);
   const rotateDevAdminSecret = useReducer(reducers.rotateDevAdminSecret);
 
-  // Clear state whenever the modal opens
+  // Clear state whenever the modal opens + record the previously focused
+  // element so we can restore focus when the modal closes.
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
     setSecret('');
     setNewSecret('');
     setError(null);
     setNotice(null);
     setBusy(false);
     setMode('claim');
+    return () => {
+      // Return focus to whoever had it before the modal opened. Wrapped
+      // in a microtask so React has finished unmounting the dialog first.
+      const el = previouslyFocusedRef.current;
+      if (el && document.contains(el)) {
+        queueMicrotask(() => el.focus?.());
+      }
+    };
   }, [open]);
 
-  // Escape to close + Tab focus trap. Scoped to this component so the
-  // handler always reads the current `open` value via the effect closure.
+  // Move focus INTO the dialog on open so the trap has a starting point
+  // regardless of how the modal was triggered (mouse or keyboard shortcut).
+  useEffect(() => {
+    if (!open || !dialogRef.current) return;
+    const first = dialogRef.current.querySelector<HTMLElement>(FOCUSABLE);
+    first?.focus();
+  }, [open]);
+
+  // Escape to close + Tab focus trap.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -130,8 +148,8 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
     }
   };
 
-  const doRotate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const doRotate = async (e?: { preventDefault(): void }) => {
+    e?.preventDefault();
     if (newSecret.length < 16 || busy) return;
     setBusy(true);
     setError(null);
@@ -215,7 +233,7 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
                 <button
                   type="button"
                   className="dev-admin-submit dev-admin-submit-secondary"
-                  onClick={e => doRotate(e as unknown as React.FormEvent)}
+                  onClick={() => doRotate()}
                   disabled={busy || newSecret.length < 16}
                 >
                   Rotate
