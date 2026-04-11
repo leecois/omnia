@@ -6,12 +6,12 @@ A Discord-style real-time chat application built on [SpacetimeDB](https://spacet
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + Vite 7 + TypeScript 5.6 |
+| Frontend | React 19 + Vite 8 (Rolldown) + TypeScript 6 |
 | Backend | SpacetimeDB 2.1 (TypeScript module) |
 | Styling | Plain CSS with CSS custom properties |
 | Linting / Formatting | Biome 2 |
-| Testing | Vitest + React Testing Library |
-| Package manager | Bun |
+| Testing | Vitest 4 + React Testing Library + jsdom |
+| Package manager | Bun 1.3+ |
 
 ## Features
 
@@ -34,7 +34,7 @@ A Discord-style real-time chat application built on [SpacetimeDB](https://spacet
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.1
+- [Bun](https://bun.sh) ≥ 1.3
 - [SpacetimeDB CLI](https://spacetimedb.com/docs/getting-started) (`spacetime`)
 
 ### Local development
