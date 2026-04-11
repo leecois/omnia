@@ -1,0 +1,23 @@
+{
+  "name": "omnia-ai-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "RAG-based /ask bot for Omnia — subscribes to SpacetimeDB, indexes messages in Qdrant, answers user questions via OpenAI/Gemini",
+  "scripts": {
+    "start": "bun --env-file=../.env.local run src/index.ts",
+    "dev": "bun --hot --env-file=../.env.local run src/index.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^1.49.0",
+    "@qdrant/js-client-rest": "^1.17.0",
+    "openai": "^6.34.0",
+    "spacetimedb": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.2"
+  }
+}
