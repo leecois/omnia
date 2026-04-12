@@ -9,6 +9,36 @@
 //   6. Start the RAG handler (watches ask_request for pending rows)
 //   7. Run forever — graceful shutdown on SIGINT / SIGTERM
 
+// Polyfill DecompressionStream for Bun's baseline build (no AVX2).
+// The SpacetimeDB SDK uses it for WebSocket decompression.
+if (typeof globalThis.DecompressionStream === 'undefined') {
+  const zlib = await import('node:zlib');
+  // @ts-expect-error — minimal polyfill, matches the subset the SDK uses
+  globalThis.DecompressionStream = class DecompressionStream {
+    readable: ReadableStream;
+    writable: WritableStream;
+    constructor(format: string) {
+      const decompressor =
+        format === 'gzip' ? zlib.createGunzip() :
+        format === 'deflate' ? zlib.createInflate() :
+        format === 'deflate-raw' ? zlib.createInflateRaw() :
+        (() => { throw new Error(`Unsupported format: ${format}`); })();
+      this.readable = new ReadableStream({
+        start(controller) {
+          decompressor.on('data', (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
+          decompressor.on('end', () => controller.close());
+          decompressor.on('error', (err: Error) => controller.error(err));
+        },
+      });
+      this.writable = new WritableStream({
+        write(chunk) { decompressor.write(chunk); },
+        close() { decompressor.end(); },
+      });
+    }
+  };
+  console.log('[polyfill] DecompressionStream shimmed via node:zlib');
+}
+
 import { loadConfig } from './config.ts';
 import { enabledServerSummary, Ingester } from './ingestion.ts';
 import { makeLLM } from './llm.ts';
