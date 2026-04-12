@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useReducer, useTable } from 'spacetimedb/react';
 import { reducers, tables } from '../module_bindings';
 import type {
-  Server,
-  Channel,
   Category,
-  ServerMember,
+  Channel,
   Invite,
-  User,
-  ServerRole,
   MemberRole,
+  Server,
+  ServerMember,
+  ServerRole,
+  User,
 } from '../module_bindings/types';
 import { generateAlias } from '../utils/alias';
 
@@ -78,9 +78,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     header: 'Channels',
-    items: [
-      { id: 'channels', label: 'Channel Setup' },
-    ],
+    items: [{ id: 'channels', label: 'Channel Setup' }],
   },
   {
     header: 'Apps',
@@ -111,8 +109,16 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const BANNER_COLORS = [
-  '#4fa3d4', '#e84a90', '#d94040', '#e88f3e', '#edc63a',
-  '#9a5cd6', '#3d88e0', '#4cd6bc', '#4c9f5a', '#5a6270',
+  '#4fa3d4',
+  '#e84a90',
+  '#d94040',
+  '#e88f3e',
+  '#edc63a',
+  '#9a5cd6',
+  '#3d88e0',
+  '#4cd6bc',
+  '#4c9f5a',
+  '#5a6270',
 ];
 
 const DEFAULT_BANNER = '#5865f2';
@@ -158,7 +164,6 @@ export default function ServerSettings({
   isSuperAdmin,
   onClose,
 }: ServerSettingsProps) {
-
   const [section, setSection] = useState<SettingsSection>('profile');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -177,11 +182,16 @@ export default function ServerSettings({
       onClick={() => setSection(item.id)}
     >
       <span className="settings-nav-label">{item.label}</span>
-      {item.badge && (
-        <span className="settings-nav-badge">{item.badge}</span>
-      )}
+      {item.badge && <span className="settings-nav-badge">{item.badge}</span>}
       {item.external && (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M14 3h7v7" />
           <path d="M10 14L21 3" />
           <path d="M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
@@ -194,15 +204,11 @@ export default function ServerSettings({
     <div className="settings-fullscreen">
       <aside className="settings-sidebar">
         <div className="settings-sidebar-inner">
-          <div className="settings-server-name">
-            {server.name.toUpperCase()}
-          </div>
+          <div className="settings-server-name">{server.name.toUpperCase()}</div>
 
           {NAV_GROUPS.map((group, i) => (
             <div key={i} className="settings-nav-group">
-              {group.header && (
-                <div className="settings-nav-header">{group.header}</div>
-              )}
+              {group.header && <div className="settings-nav-header">{group.header}</div>}
               {group.items.map(renderNavItem)}
             </div>
           ))}
@@ -271,12 +277,7 @@ export default function ServerSettings({
               isSuperAdmin={isSuperAdmin}
             />
           )}
-          {section === 'ai' && (
-            <AiSection
-              server={server}
-              canEdit={isAdmin || isSuperAdmin}
-            />
-          )}
+          {section === 'ai' && <AiSection server={server} canEdit={isAdmin || isSuperAdmin} />}
           {/* All other sections are stubs */}
           {section !== 'profile' &&
             section !== 'members' &&
@@ -286,11 +287,7 @@ export default function ServerSettings({
             section !== 'ai' && <ComingSoonSection sectionId={section} />}
         </div>
 
-        <button
-          className="settings-close-esc"
-          onClick={onClose}
-          aria-label="Close settings"
-        >
+        <button className="settings-close-esc" onClick={onClose} aria-label="Close settings">
           <div className="settings-close-esc-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
@@ -345,7 +342,14 @@ function ServerProfileSection({
     setIconUrl(normStr(server.iconUrl));
     setBannerColor(normBanner(server.bannerColor));
     setTraits(normStr(server.traits));
-  }, [server.id, server.name, server.description, server.iconUrl, server.bannerColor, server.traits]);
+  }, [
+    server.id,
+    server.name,
+    server.description,
+    server.iconUrl,
+    server.bannerColor,
+    server.traits,
+  ]);
 
   const dirty =
     name !== server.name ||
@@ -400,17 +404,11 @@ function ServerProfileSection({
   // Compute preview stats
   const memberCount = members.length;
   const onlineCount = useMemo(() => {
-    const memberHexes = new Set(
-      members.map(m => m.userIdentity.toHexString())
-    );
-    return users.filter(
-      u => memberHexes.has(u.identity.toHexString()) && u.online
-    ).length;
+    const memberHexes = new Set(members.map(m => m.userIdentity.toHexString()));
+    return users.filter(u => memberHexes.has(u.identity.toHexString()) && u.online).length;
   }, [members, users]);
 
-  const createdDate = new Date(
-    Number(server.createdAt.microsSinceUnixEpoch / 1000n)
-  );
+  const createdDate = new Date(Number(server.createdAt.microsSinceUnixEpoch / 1000n));
   const estText = `Est. ${createdDate.toLocaleString('en-US', { month: 'short', year: 'numeric' })}`;
 
   return (
@@ -419,8 +417,8 @@ function ServerProfileSection({
         <div className="profile-top-fields">
           <h2 className="settings-section-title">Server Profile</h2>
           <p className="settings-section-subtitle">
-            Customize how your server appears in invite links and, if enabled,
-            in Server Discovery and Announcement Channel messages
+            Customize how your server appears in invite links and, if enabled, in Server Discovery
+            and Announcement Channel messages
           </p>
 
           <div className="settings-field">
@@ -436,30 +434,21 @@ function ServerProfileSection({
 
           <div className="settings-field">
             <label>ICON</label>
-            <div className="settings-field-hint">
-              We recommend an image of at least 512x512.
-            </div>
+            <div className="settings-field-hint">We recommend an image of at least 512x512.</div>
             <div className="profile-icon-row">
               <button
                 type="button"
                 className="btn-primary"
                 disabled={!canEdit}
                 onClick={() => {
-                  const url = window.prompt(
-                    'Enter an image URL for your server icon:',
-                    iconUrl
-                  );
+                  const url = window.prompt('Enter an image URL for your server icon:', iconUrl);
                   if (url !== null) setIconUrl(url);
                 }}
               >
                 Change Server Icon
               </button>
               {iconUrl && canEdit && (
-                <button
-                  type="button"
-                  className="btn-link"
-                  onClick={() => setIconUrl('')}
-                >
+                <button type="button" className="btn-link" onClick={() => setIconUrl('')}>
                   Remove Icon
                 </button>
               )}
@@ -537,20 +526,10 @@ function ServerProfileSection({
         <div className="settings-save-bar">
           <span>Careful — you have unsaved changes!</span>
           <div>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={reset}
-              disabled={saving}
-            >
+            <button type="button" className="btn-secondary" onClick={reset} disabled={saving}>
               Reset
             </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={save}
-              disabled={saving}
-            >
+            <button type="button" className="btn-primary" onClick={save} disabled={saving}>
               {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
@@ -670,8 +649,7 @@ function MembersSection({
         );
       })
       .sort((a, b) => {
-        const rank = (r: string) =>
-          r === 'owner' ? 0 : r === 'admin' ? 1 : r === 'mod' ? 2 : 3;
+        const rank = (r: string) => (r === 'owner' ? 0 : r === 'admin' ? 1 : r === 'mod' ? 2 : 3);
         const ra = rank(a.member.role);
         const rb = rank(b.member.role);
         if (ra !== rb) return ra - rb;
@@ -700,22 +678,15 @@ function MembersSection({
           const color = user?.avatarColor ?? '#5865F2';
           return (
             <div key={hex} className="settings-member-row">
-              <div
-                className="settings-member-avatar"
-                style={{ backgroundColor: color }}
-              >
+              <div className="settings-member-avatar" style={{ backgroundColor: color }}>
                 {displayName[0]?.toUpperCase() ?? '?'}
               </div>
               <div className="settings-member-body">
                 <div className="settings-member-name">
                   {displayName}
-                  {isSelf && (
-                    <span className="settings-member-self"> (you)</span>
-                  )}
+                  {isSelf && <span className="settings-member-self"> (you)</span>}
                 </div>
-                <div className="settings-member-meta">
-                  {user?.name ?? hex.slice(0, 8)}
-                </div>
+                <div className="settings-member-meta">{user?.name ?? hex.slice(0, 8)}</div>
               </div>
               <div className="settings-member-role">
                 {canSetRole && !isOwnerRow ? (
@@ -734,9 +705,7 @@ function MembersSection({
                     <option value="member">Member</option>
                   </select>
                 ) : (
-                  <span className={`settings-role-badge ${member.role}`}>
-                    {member.role}
-                  </span>
+                  <span className={`settings-role-badge ${member.role}`}>{member.role}</span>
                 )}
               </div>
               {canKick && !isOwnerRow && !isSelf && (
@@ -845,27 +814,18 @@ function InvitesSection({
 
       {err && <div className="settings-error">{err}</div>}
 
-      <div className="settings-sub-header">
-        Active Invites ({serverInvites.length})
-      </div>
+      <div className="settings-sub-header">Active Invites ({serverInvites.length})</div>
       <div className="settings-list">
-        {serverInvites.length === 0 && (
-          <div className="settings-empty">No invites yet.</div>
-        )}
+        {serverInvites.length === 0 && <div className="settings-empty">No invites yet.</div>}
         {serverInvites.map(inv => {
           const creator = userByHex.get(inv.createdBy.toHexString());
-          const creatorName =
-            creator?.name ?? generateAlias(inv.createdBy.toHexString());
+          const creatorName = creator?.name ?? generateAlias(inv.createdBy.toHexString());
           const expiresText =
             inv.expiresAt === 0n
               ? 'Never expires'
-              : `Expires ${new Date(
-                  Number(inv.expiresAt / 1000n)
-                ).toLocaleDateString()}`;
+              : `Expires ${new Date(Number(inv.expiresAt / 1000n)).toLocaleDateString()}`;
           const usesText =
-            inv.maxUses > 0
-              ? `${inv.usesCount}/${inv.maxUses} uses`
-              : `${inv.usesCount} uses`;
+            inv.maxUses > 0 ? `${inv.usesCount}/${inv.maxUses} uses` : `${inv.usesCount} uses`;
           return (
             <div key={inv.id.toString()} className="settings-invite-row">
               <code className="settings-invite-code">{inv.code}</code>
@@ -876,11 +836,7 @@ function InvitesSection({
                 <span>·</span>
                 <span>by {creatorName}</span>
               </div>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => copy(inv.code)}
-              >
+              <button type="button" className="btn-secondary" onClick={() => copy(inv.code)}>
                 {copied === inv.code ? '✓ Copied' : 'Copy'}
               </button>
               {canManage && (
@@ -888,9 +844,7 @@ function InvitesSection({
                   type="button"
                   className="settings-row-action danger"
                   onClick={() =>
-                    deleteInvite({ inviteId: inv.id }).catch(err =>
-                      alert(String(err))
-                    )
+                    deleteInvite({ inviteId: inv.id }).catch(err => alert(String(err)))
                   }
                 >
                   Revoke
@@ -921,7 +875,11 @@ const PERMISSION_FLAGS: Array<{
   { flag: 128n, label: 'Manage Server', description: 'Edit server settings and profile.' },
   { flag: 256n, label: 'Create Invite', description: 'Generate invite links to share.' },
   { flag: 512n, label: 'Add Reactions', description: 'React to messages with emoji.' },
-  { flag: 1024n, label: 'Administrator', description: 'Bypass all permission checks. Use with care.' },
+  {
+    flag: 1024n,
+    label: 'Administrator',
+    description: 'Bypass all permission checks. Use with care.',
+  },
 ];
 
 function RolesSection({
@@ -945,20 +903,14 @@ function RolesSection({
   const assignRole = useReducer(reducers.assignRole);
   const unassignRole = useReducer(reducers.unassignRole);
 
-  const sortedRoles = useMemo(
-    () => [...roles].sort((a, b) => b.position - a.position),
-    [roles]
-  );
+  const sortedRoles = useMemo(() => [...roles].sort((a, b) => b.position - a.position), [roles]);
 
   const [selectedId, setSelectedId] = useState<bigint | null>(null);
   useEffect(() => {
     if (selectedId === null && sortedRoles.length > 0) {
       setSelectedId(sortedRoles[0].id);
     }
-    if (
-      selectedId !== null &&
-      !sortedRoles.some(r => r.id === selectedId)
-    ) {
+    if (selectedId !== null && !sortedRoles.some(r => r.id === selectedId)) {
       setSelectedId(sortedRoles[0]?.id ?? null);
     }
   }, [sortedRoles, selectedId]);
@@ -981,9 +933,7 @@ function RolesSection({
 
   const dirty =
     selected !== null &&
-    (name !== selected.name ||
-      color !== selected.color ||
-      perms !== selected.permissions);
+    (name !== selected.name || color !== selected.color || perms !== selected.permissions);
 
   const togglePerm = (flag: bigint) => {
     setPerms(p => ((p & flag) !== 0n ? p & ~flag : p | flag));
@@ -1027,17 +977,19 @@ function RolesSection({
         assignedHexes.add(mr.userIdentity.toHexString());
       }
     }
-    return members.map(m => {
-      const hex = m.userIdentity.toHexString();
-      const u = userByHex.get(hex);
-      return {
-        member: m,
-        user: u,
-        hex,
-        displayName: m.nickname || u?.name || generateAlias(hex),
-        assigned: assignedHexes.has(hex),
-      };
-    }).sort((a, b) => a.displayName.localeCompare(b.displayName));
+    return members
+      .map(m => {
+        const hex = m.userIdentity.toHexString();
+        const u = userByHex.get(hex);
+        return {
+          member: m,
+          user: u,
+          hex,
+          displayName: m.nickname || u?.name || generateAlias(hex),
+          assigned: assignedHexes.has(hex),
+        };
+      })
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [selected, members, users, memberRoles]);
 
   return (
@@ -1073,9 +1025,7 @@ function RolesSection({
                 {r.isDefault && <span className="role-default-tag">default</span>}
               </button>
             ))}
-            {sortedRoles.length === 0 && (
-              <div className="settings-empty">No roles yet.</div>
-            )}
+            {sortedRoles.length === 0 && <div className="settings-empty">No roles yet.</div>}
           </div>
         </div>
 
@@ -1101,7 +1051,16 @@ function RolesSection({
               <div className="settings-field">
                 <label>ROLE COLOR</label>
                 <div className="role-color-row">
-                  {['', '#5865f2', '#3ba55c', '#faa61a', '#ed4245', '#eb459e', '#9b59b6', '#1abc9c'].map(c => (
+                  {[
+                    '',
+                    '#5865f2',
+                    '#3ba55c',
+                    '#faa61a',
+                    '#ed4245',
+                    '#eb459e',
+                    '#9b59b6',
+                    '#1abc9c',
+                  ].map(c => (
                     <button
                       key={c || 'none'}
                       type="button"
@@ -1145,11 +1104,7 @@ function RolesSection({
               {canEdit && (
                 <div className="role-actions-row">
                   {!selected.isDefault && (
-                    <button
-                      type="button"
-                      className="btn-danger"
-                      onClick={removeSelected}
-                    >
+                    <button type="button" className="btn-danger" onClick={removeSelected}>
                       Delete Role
                     </button>
                   )}
@@ -1168,11 +1123,7 @@ function RolesSection({
                       >
                         Reset
                       </button>
-                      <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={save}
-                      >
+                      <button type="button" className="btn-primary" onClick={save}>
                         Save Changes
                       </button>
                     </>
@@ -1198,12 +1149,11 @@ function RolesSection({
                             {displayName[0]?.toUpperCase() ?? '?'}
                           </div>
                           <div className="settings-member-body">
-                            <div className="settings-member-name">
-                              {displayName}
-                            </div>
+                            <div className="settings-member-name">{displayName}</div>
                           </div>
-                          {canEdit && user && (
-                            assigned ? (
+                          {canEdit &&
+                            user &&
+                            (assigned ? (
                               <button
                                 type="button"
                                 className="settings-row-action danger"
@@ -1229,8 +1179,7 @@ function RolesSection({
                               >
                                 Assign
                               </button>
-                            )
-                          )}
+                            ))}
                         </div>
                       );
                     })}
@@ -1239,9 +1188,7 @@ function RolesSection({
               )}
             </>
           ) : (
-            <div className="settings-empty">
-              Select a role to edit, or create a new one.
-            </div>
+            <div className="settings-empty">Select a role to edit, or create a new one.</div>
           )}
         </div>
       </div>
@@ -1251,13 +1198,7 @@ function RolesSection({
 
 // ─── Section: AI Assistant ───────────────────────────────────────────────
 
-function AiSection({
-  server,
-  canEdit,
-}: {
-  server: Server;
-  canEdit: boolean;
-}) {
+function AiSection({ server, canEdit }: { server: Server; canEdit: boolean }) {
   const [allConfigs] = useTable(tables.ai_config);
   const ensureAiConfig = useReducer(reducers.ensureAiConfig);
   const updateAiConfig = useReducer(reducers.updateAiConfig);
@@ -1282,7 +1223,7 @@ function AiSection({
     ensureAiConfig({ serverId: server.id }).catch(err => {
       console.warn('[ai] ensure_ai_config failed:', err);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server.id]);
 
   // Sync local editor state when the row first arrives / changes externally.
@@ -1347,10 +1288,7 @@ function AiSection({
 
   const tokensUsed = existing?.tokensUsedThisMonth ?? 0n;
   const tokensBudget = existing?.monthlyTokenBudget ?? 0n;
-  const pctUsed =
-    tokensBudget > 0n
-      ? Math.min(100, Number((tokensUsed * 100n) / tokensBudget))
-      : 0;
+  const pctUsed = tokensBudget > 0n ? Math.min(100, Number((tokensUsed * 100n) / tokensBudget)) : 0;
   const nearLimit = pctUsed >= 80;
 
   return (
@@ -1358,17 +1296,19 @@ function AiSection({
       <h2 className="settings-section-title">AI Assistant</h2>
       <p className="settings-section-subtitle">
         Let members ask questions grounded in this server's messages with the
-        <code> /ask </code> slash command. A sidecar bot indexes messages into a
-        vector store (Qdrant) and queries an LLM (OpenAI or Gemini). Token usage
-        is capped by the monthly budget below.
+        <code> /ask </code> slash command. A sidecar bot indexes messages into a vector store
+        (Qdrant) and queries an LLM (OpenAI or Gemini). Token usage is capped by the monthly budget
+        below.
       </p>
 
       {!canEdit && (
         <div className="ai-perm-notice" role="note">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2L2 22h20L12 2zm0 6l7.53 13H4.47L12 8zm-1 4v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
+            <path d="M12 2L2 22h20L12 2zm0 6l7.53 13H4.47L12 8zm-1 4v4h2v-4h-2zm0 6v2h2v-2h-2z" />
           </svg>
-          <span>You need the <strong>Manage Server</strong> permission to change AI settings.</span>
+          <span>
+            You need the <strong>Manage Server</strong> permission to change AI settings.
+          </span>
         </div>
       )}
 
@@ -1386,7 +1326,11 @@ function AiSection({
         />
         <AiToggleRow
           label="/ask slash command"
-          title={<><code>/ask</code> slash command</>}
+          title={
+            <>
+              <code>/ask</code> slash command
+            </>
+          }
           sub="Members can type /ask <question> in any channel and the bot replies with a grounded answer."
           checked={askEnabled}
           disabled={!canEdit || !enabled}
@@ -1481,7 +1425,9 @@ function AiSection({
 
       {/* Transient saved confirmation toast */}
       {!dirty && savedAt && (
-        <div className="ai-saved-toast" role="status">Saved ✓</div>
+        <div className="ai-saved-toast" role="status">
+          Saved ✓
+        </div>
       )}
     </div>
   );
@@ -1574,9 +1520,8 @@ function ChannelsSection({
 
   // Sort categories by position; channels by position within each category
   const sortedCats = useMemo(
-    () => [...categories]
-      .filter(c => c.serverId === server.id)
-      .sort((a, b) => a.position - b.position),
+    () =>
+      [...categories].filter(c => c.serverId === server.id).sort((a, b) => a.position - b.position),
     [categories, server.id]
   );
   const channelsByCat = useMemo(() => {
@@ -1601,7 +1546,9 @@ function ChannelsSection({
     setEditName(cat.name);
     setEditTopic('');
   }
-  function cancelEdit() { setEditing(null); }
+  function cancelEdit() {
+    setEditing(null);
+  }
 
   function saveEdit() {
     if (!editing) return;
@@ -1649,7 +1596,10 @@ function ChannelsSection({
               value={editName}
               onChange={e => setEditName(e.target.value)}
               placeholder="channel-name"
-              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveEdit();
+                if (e.key === 'Escape') cancelEdit();
+              }}
               autoFocus
             />
             <input
@@ -1657,11 +1607,18 @@ function ChannelsSection({
               value={editTopic}
               onChange={e => setEditTopic(e.target.value)}
               placeholder="Channel topic (optional)"
-              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveEdit();
+                if (e.key === 'Escape') cancelEdit();
+              }}
             />
             <div className="ch-setup-inline-actions">
-              <button className="ch-setup-btn-save" onClick={saveEdit}>Save</button>
-              <button className="ch-setup-btn-cancel" onClick={cancelEdit}>Cancel</button>
+              <button className="ch-setup-btn-save" onClick={saveEdit}>
+                Save
+              </button>
+              <button className="ch-setup-btn-cancel" onClick={cancelEdit}>
+                Cancel
+              </button>
             </div>
           </div>
         ) : (
@@ -1673,14 +1630,22 @@ function ChannelsSection({
             </div>
             {canEdit && (
               <div className="ch-setup-row-actions">
-                <button className="ch-setup-icon-btn" title="Edit" onClick={() => startEditChannel(c)}>
+                <button
+                  className="ch-setup-icon-btn"
+                  title="Edit"
+                  onClick={() => startEditChannel(c)}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                   </svg>
                 </button>
-                <button className="ch-setup-icon-btn danger" title="Delete" onClick={() => callDeleteChannel({ channelId: c.id })}>
+                <button
+                  className="ch-setup-icon-btn danger"
+                  title="Delete"
+                  onClick={() => callDeleteChannel({ channelId: c.id })}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z"/>
+                    <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z" />
                   </svg>
                 </button>
               </div>
@@ -1691,7 +1656,10 @@ function ChannelsSection({
     );
   }
 
-  function renderCategoryBlock(cat: { id: bigint; name: string; position: number }, chans: Channel[]) {
+  function renderCategoryBlock(
+    cat: { id: bigint; name: string; position: number },
+    chans: Channel[]
+  ) {
     const isEditingCat = editing?.type === 'category' && editing.id === cat.id;
     return (
       <div key={cat.id.toString()} className="ch-setup-category-block">
@@ -1703,12 +1671,19 @@ function ChannelsSection({
                 value={editName}
                 onChange={e => setEditName(e.target.value)}
                 placeholder="CATEGORY NAME"
-                onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveEdit();
+                  if (e.key === 'Escape') cancelEdit();
+                }}
                 autoFocus
               />
               <div className="ch-setup-inline-actions">
-                <button className="ch-setup-btn-save" onClick={saveEdit}>Save</button>
-                <button className="ch-setup-btn-cancel" onClick={cancelEdit}>Cancel</button>
+                <button className="ch-setup-btn-save" onClick={saveEdit}>
+                  Save
+                </button>
+                <button className="ch-setup-btn-cancel" onClick={cancelEdit}>
+                  Cancel
+                </button>
               </div>
             </div>
           ) : (
@@ -1716,14 +1691,22 @@ function ChannelsSection({
               <span className="ch-setup-cat-name">{cat.name}</span>
               {canEdit && (
                 <div className="ch-setup-row-actions">
-                  <button className="ch-setup-icon-btn" title="Rename" onClick={() => startEditCategory(cat)}>
+                  <button
+                    className="ch-setup-icon-btn"
+                    title="Rename"
+                    onClick={() => startEditCategory(cat)}
+                  >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                     </svg>
                   </button>
-                  <button className="ch-setup-icon-btn danger" title="Delete category" onClick={() => callDeleteCategory({ categoryId: cat.id })}>
+                  <button
+                    className="ch-setup-icon-btn danger"
+                    title="Delete category"
+                    onClick={() => callDeleteCategory({ categoryId: cat.id })}
+                  >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z"/>
+                      <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z" />
                     </svg>
                   </button>
                 </div>
@@ -1731,9 +1714,7 @@ function ChannelsSection({
             </>
           )}
         </div>
-        <div className="ch-setup-channel-list">
-          {chans.map(renderChannelRow)}
-        </div>
+        <div className="ch-setup-channel-list">{chans.map(renderChannelRow)}</div>
       </div>
     );
   }
@@ -1742,9 +1723,7 @@ function ChannelsSection({
     <div className="ch-setup-wrap">
       <div className="settings-section-header">
         <h2>Channel Setup</h2>
-        <p className="settings-section-desc">
-          Manage the categories and channels in this server.
-        </p>
+        <p className="settings-section-desc">Manage the categories and channels in this server.</p>
       </div>
 
       {/* Reseed button — super admin + default server only */}
@@ -1755,7 +1734,10 @@ function ChannelsSection({
               <span>This will delete all existing channels and messages. Continue?</span>
               <button
                 className="ch-setup-btn-danger"
-                onClick={() => { callReseed(); setShowReseedConfirm(false); }}
+                onClick={() => {
+                  callReseed();
+                  setShowReseedConfirm(false);
+                }}
               >
                 Yes, reseed
               </button>
@@ -1775,10 +1757,8 @@ function ChannelsSection({
         {sortedCats.map(cat =>
           renderCategoryBlock(cat, channelsByCat.get(cat.id.toString()) ?? [])
         )}
-        {uncategorized.length > 0 && renderCategoryBlock(
-          { id: 0n, name: 'UNCATEGORIZED', position: 9999 },
-          uncategorized
-        )}
+        {uncategorized.length > 0 &&
+          renderCategoryBlock({ id: 0n, name: 'UNCATEGORIZED', position: 9999 }, uncategorized)}
       </div>
 
       {canEdit && (
@@ -1790,7 +1770,10 @@ function ChannelsSection({
                 placeholder="new-channel-name"
                 value={newChannelName}
                 onChange={e => setNewChannelName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') submitNewChannel(); if (e.key === 'Escape') setShowNewChannel(false); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') submitNewChannel();
+                  if (e.key === 'Escape') setShowNewChannel(false);
+                }}
                 autoFocus
               />
               <select
@@ -1800,11 +1783,17 @@ function ChannelsSection({
               >
                 <option value="0">No category</option>
                 {sortedCats.map(c => (
-                  <option key={c.id.toString()} value={c.id.toString()}>{c.name}</option>
+                  <option key={c.id.toString()} value={c.id.toString()}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
-              <button className="ch-setup-btn-save" onClick={submitNewChannel}>Add</button>
-              <button className="ch-setup-btn-cancel" onClick={() => setShowNewChannel(false)}>Cancel</button>
+              <button className="ch-setup-btn-save" onClick={submitNewChannel}>
+                Add
+              </button>
+              <button className="ch-setup-btn-cancel" onClick={() => setShowNewChannel(false)}>
+                Cancel
+              </button>
             </div>
           ) : showNewCat ? (
             <div className="ch-setup-add-form">
@@ -1813,16 +1802,27 @@ function ChannelsSection({
                 placeholder="CATEGORY NAME"
                 value={newCatName}
                 onChange={e => setNewCatName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') submitNewCategory(); if (e.key === 'Escape') setShowNewCat(false); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') submitNewCategory();
+                  if (e.key === 'Escape') setShowNewCat(false);
+                }}
                 autoFocus
               />
-              <button className="ch-setup-btn-save" onClick={submitNewCategory}>Add</button>
-              <button className="ch-setup-btn-cancel" onClick={() => setShowNewCat(false)}>Cancel</button>
+              <button className="ch-setup-btn-save" onClick={submitNewCategory}>
+                Add
+              </button>
+              <button className="ch-setup-btn-cancel" onClick={() => setShowNewCat(false)}>
+                Cancel
+              </button>
             </div>
           ) : (
             <>
-              <button className="ch-setup-add-btn" onClick={() => setShowNewChannel(true)}>+ Add Channel</button>
-              <button className="ch-setup-add-btn" onClick={() => setShowNewCat(true)}>+ Add Category</button>
+              <button className="ch-setup-add-btn" onClick={() => setShowNewChannel(true)}>
+                + Add Channel
+              </button>
+              <button className="ch-setup-add-btn" onClick={() => setShowNewCat(true)}>
+                + Add Category
+              </button>
             </>
           )}
         </div>
@@ -1834,9 +1834,7 @@ function ChannelsSection({
 // ─── Coming Soon stub ────────────────────────────────────────────────────
 
 function ComingSoonSection({ sectionId }: { sectionId: string }) {
-  const label =
-    NAV_GROUPS.flatMap(g => g.items).find(i => i.id === sectionId)?.label ??
-    sectionId;
+  const label = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === sectionId)?.label ?? sectionId;
   return (
     <div className="settings-section">
       <h2 className="settings-section-title">{label}</h2>
@@ -1846,8 +1844,8 @@ function ComingSoonSection({ sectionId }: { sectionId: string }) {
         </svg>
         <h3>Coming soon</h3>
         <p>
-          The <b>{label}</b> module isn&apos;t available yet. Stay tuned — it
-          will appear here once implemented.
+          The <b>{label}</b> module isn&apos;t available yet. Stay tuned — it will appear here once
+          implemented.
         </p>
       </div>
     </div>
@@ -1884,15 +1882,11 @@ function DeleteServerConfirm({
 
   return (
     <div className="modal-backdrop" onMouseDown={onCancel}>
-      <div
-        className="modal modal-danger"
-        onMouseDown={e => e.stopPropagation()}
-      >
+      <div className="modal modal-danger" onMouseDown={e => e.stopPropagation()}>
         <h3>Delete &lsquo;{server.name}&rsquo;</h3>
         <p className="modal-subtitle">
-          Are you sure you want to delete <b>{server.name}</b>? This action
-          cannot be undone. All channels, messages, members, and invites will
-          be permanently removed.
+          Are you sure you want to delete <b>{server.name}</b>? This action cannot be undone. All
+          channels, messages, members, and invites will be permanently removed.
         </p>
         <div style={{ padding: '0 16px 16px' }}>
           <label>
@@ -1908,12 +1902,7 @@ function DeleteServerConfirm({
           {err && <div className="settings-error">{err}</div>}
         </div>
         <div className="modal-actions">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={onCancel}
-            disabled={deleting}
-          >
+          <button type="button" className="btn-secondary" onClick={onCancel} disabled={deleting}>
             Cancel
           </button>
           <button

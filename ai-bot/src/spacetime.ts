@@ -9,7 +9,7 @@
 //   * surface a tiny `awaitReady()` helper so the main loop can block
 //     until the initial state has been synced
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { DbConnection } from '../../src/module_bindings/index.ts';
 import type { BotConfig } from './config.ts';
 

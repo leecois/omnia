@@ -24,7 +24,7 @@ import { loadConfig } from './config.ts';
 import { connectBot } from './spacetime.ts';
 
 const SECRET_GOOD = 'omnia-verify-initial-secret-x1';
-const SECRET_BAD  = 'definitely-not-the-secret';
+const SECRET_BAD = 'definitely-not-the-secret';
 const SECRET_ROTATED = 'omnia-verify-rotated-secret-y2';
 
 type Step = { name: string; fn: () => Promise<void>; expectError?: RegExp };
@@ -34,13 +34,11 @@ async function main(): Promise<void> {
   const { conn, identityHex } = await connectBot(cfg);
 
   await new Promise<void>((resolve, reject) => {
-    conn.subscriptionBuilder()
+    conn
+      .subscriptionBuilder()
       .onApplied(() => resolve())
       .onError(ctx => reject(ctx.event ?? new Error('sub error')))
-      .subscribe([
-        'SELECT * FROM super_admin',
-        'SELECT * FROM dev_admin_audit',
-      ]);
+      .subscribe(['SELECT * FROM super_admin', 'SELECT * FROM dev_admin_audit']);
   });
 
   const isSuper = (): boolean => {
@@ -168,9 +166,7 @@ async function main(): Promise<void> {
 
   // Print audit table.
   console.log('dev_admin_audit:');
-  const audit = [...conn.db.dev_admin_audit.iter()].sort((a, b) =>
-    a.id < b.id ? -1 : 1
-  );
+  const audit = [...conn.db.dev_admin_audit.iter()].sort((a, b) => (a.id < b.id ? -1 : 1));
   for (const row of audit) {
     const tag = row.success ? '✓' : '✗';
     console.log(`  #${row.id}  ${tag}  ${row.action.padEnd(14)} ${row.detail}`);
@@ -188,4 +184,7 @@ async function main(): Promise<void> {
   process.exit(failed === 0 ? 0 : 1);
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

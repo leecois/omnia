@@ -28,8 +28,7 @@ interface Props {
 }
 
 // Selector that matches every focusable element. Used for the focus trap.
-const FOCUSABLE =
-  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
   const [mode, setMode] = useState<'claim' | 'seed'>('claim');
@@ -121,7 +120,9 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
       if (/not been seeded/i.test(msg)) {
         setMode('seed');
         setError(null);
-        setNotice('The dev secret has not been seeded yet. Enter a new one below (minimum 16 characters).');
+        setNotice(
+          'The dev secret has not been seeded yet. Enter a new one below (minimum 16 characters).'
+        );
       } else {
         setError(msg);
       }
@@ -180,16 +181,11 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
               Developer Access
             </h3>
             <p className="dev-admin-sub">
-              Break-glass claim of super-admin privileges. Every action on this
-              screen is recorded in <code>dev_admin_audit</code>.
+              Break-glass claim of super-admin privileges. Every action on this screen is recorded
+              in <code>dev_admin_audit</code>.
             </p>
           </div>
-          <button
-            type="button"
-            className="dev-admin-close"
-            onClick={onClose}
-            aria-label="Close"
-          >
+          <button type="button" className="dev-admin-close" onClick={onClose} aria-label="Close">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
             </svg>
@@ -218,8 +214,8 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
               <div className="dev-admin-rotate">
                 <h4>Rotate secret</h4>
                 <p>
-                  You are currently super admin — you can rotate the stored
-                  secret. All future claimers will need the new value.
+                  You are currently super admin — you can rotate the stored secret. All future
+                  claimers will need the new value.
                 </p>
                 <input
                   type="password"
@@ -259,11 +255,14 @@ export default function DevAdminModal({ open, onClose, isSuperAdmin }: Props) {
               />
             </label>
             <p className="dev-admin-help">
-              This is a one-time bootstrap — the table is empty, so the first
-              caller wins. Store this value in a password manager before
-              submitting.
+              This is a one-time bootstrap — the table is empty, so the first caller wins. Store
+              this value in a password manager before submitting.
             </p>
-            <button type="submit" className="dev-admin-submit" disabled={busy || newSecret.length < 16}>
+            <button
+              type="submit"
+              className="dev-admin-submit"
+              disabled={busy || newSecret.length < 16}
+            >
               {busy ? 'Seeding…' : 'Seed & continue'}
             </button>
           </form>

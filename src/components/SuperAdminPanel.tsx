@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useReducer } from 'spacetimedb/react';
 import { reducers } from '../module_bindings';
-import type {
-  Server,
-  SuperAdmin,
-  SpecialChatRole,
-  User,
-} from '../module_bindings/types';
+import type { Server, SpecialChatRole, SuperAdmin, User } from '../module_bindings/types';
 import { generateAlias } from '../utils/alias';
 
 const DEFAULT_SERVER_ID = 1n;
@@ -57,8 +52,7 @@ export default function SuperAdminPanel({
     [superAdmins]
   );
 
-  const defaultServer =
-    servers.find(s => s.id === DEFAULT_SERVER_ID) ?? null;
+  const defaultServer = servers.find(s => s.id === DEFAULT_SERVER_ID) ?? null;
 
   const specialHexes = useMemo(() => {
     const s = new Set<string>();
@@ -81,20 +75,14 @@ export default function SuperAdminPanel({
       })
       .filter(row => {
         if (!q) return true;
-        return (
-          row.displayName.toLowerCase().includes(q) ||
-          row.hex.toLowerCase().startsWith(q)
-        );
+        return row.displayName.toLowerCase().includes(q) || row.hex.toLowerCase().startsWith(q);
       })
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }, [allUsers, query]);
 
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
-      <div
-        className="modal modal-super-admin"
-        onMouseDown={e => e.stopPropagation()}
-      >
+      <div className="modal modal-super-admin" onMouseDown={e => e.stopPropagation()}>
         <header className="super-admin-header">
           <div className="super-admin-title">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -103,17 +91,12 @@ export default function SuperAdminPanel({
             <div>
               <h3>Super Admin Panel</h3>
               <p>
-                Grant administrative privileges and chat-write access for the
-                default community server.
+                Grant administrative privileges and chat-write access for the default community
+                server.
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            className="modal-close-btn"
-            onClick={onClose}
-            aria-label="Close"
-          >
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
             </svg>
@@ -126,21 +109,15 @@ export default function SuperAdminPanel({
             className={`super-admin-tab ${tab === 'super' ? 'active' : ''}`}
             onClick={() => setTab('super')}
           >
-            Super Admins{' '}
-            <span className="super-admin-tab-count">
-              {superAdmins.length}
-            </span>
+            Super Admins <span className="super-admin-tab-count">{superAdmins.length}</span>
           </button>
           <button
             type="button"
             className={`super-admin-tab ${tab === 'special' ? 'active' : ''}`}
             onClick={() => setTab('special')}
           >
-            Special Role (
-            {defaultServer?.name ?? 'Default Server'}){' '}
-            <span className="super-admin-tab-count">
-              {specialHexes.size}
-            </span>
+            Special Role ({defaultServer?.name ?? 'Default Server'}){' '}
+            <span className="super-admin-tab-count">{specialHexes.size}</span>
           </button>
         </div>
 
@@ -155,40 +132,26 @@ export default function SuperAdminPanel({
 
           {tab === 'super' && (
             <div className="settings-list">
-              {filtered.length === 0 && (
-                <div className="settings-empty">No users found.</div>
-              )}
+              {filtered.length === 0 && <div className="settings-empty">No users found.</div>}
               {filtered.map(({ user, hex, displayName }) => {
                 const isMe = hex === currentIdentityHex;
                 const granted = superAdminHexes.has(hex);
                 const color = user.avatarColor ?? '#5865F2';
                 return (
                   <div key={hex} className="settings-member-row">
-                    <div
-                      className="settings-member-avatar"
-                      style={{ backgroundColor: color }}
-                    >
+                    <div className="settings-member-avatar" style={{ backgroundColor: color }}>
                       {displayName[0]?.toUpperCase() ?? '?'}
                     </div>
                     <div className="settings-member-body">
                       <div className="settings-member-name">
                         {displayName}
-                        {isMe && (
-                          <span className="settings-member-self">
-                            {' '}
-                            (you)
-                          </span>
-                        )}
+                        {isMe && <span className="settings-member-self"> (you)</span>}
                       </div>
-                      <div className="settings-member-meta">
-                        {hex.slice(0, 12)}…
-                      </div>
+                      <div className="settings-member-meta">{hex.slice(0, 12)}…</div>
                     </div>
                     {granted ? (
                       <>
-                        <span className="settings-role-badge owner">
-                          Super Admin
-                        </span>
+                        <span className="settings-role-badge owner">Super Admin</span>
                         {!isMe && (
                           <button
                             type="button"
@@ -224,40 +187,26 @@ export default function SuperAdminPanel({
 
           {tab === 'special' && (
             <div className="settings-list">
-              {filtered.length === 0 && (
-                <div className="settings-empty">No users found.</div>
-              )}
+              {filtered.length === 0 && <div className="settings-empty">No users found.</div>}
               {filtered.map(({ user, hex, displayName }) => {
                 const isMe = hex === currentIdentityHex;
                 const granted = specialHexes.has(hex);
                 const color = user.avatarColor ?? '#5865F2';
                 return (
                   <div key={hex} className="settings-member-row">
-                    <div
-                      className="settings-member-avatar"
-                      style={{ backgroundColor: color }}
-                    >
+                    <div className="settings-member-avatar" style={{ backgroundColor: color }}>
                       {displayName[0]?.toUpperCase() ?? '?'}
                     </div>
                     <div className="settings-member-body">
                       <div className="settings-member-name">
                         {displayName}
-                        {isMe && (
-                          <span className="settings-member-self">
-                            {' '}
-                            (you)
-                          </span>
-                        )}
+                        {isMe && <span className="settings-member-self"> (you)</span>}
                       </div>
-                      <div className="settings-member-meta">
-                        {hex.slice(0, 12)}…
-                      </div>
+                      <div className="settings-member-meta">{hex.slice(0, 12)}…</div>
                     </div>
                     {granted ? (
                       <>
-                        <span className="settings-role-badge mod">
-                          Special Role
-                        </span>
+                        <span className="settings-role-badge mod">Special Role</span>
                         <button
                           type="button"
                           className="settings-row-action danger"

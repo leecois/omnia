@@ -98,7 +98,10 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const lines = latest.text.split('\n').map(l => '    ' + l).join('\n');
+    const lines = latest.text
+      .split('\n')
+      .map(l => '    ' + l)
+      .join('\n');
     console.log(`  ✓ answer:\n${lines}\n`);
   }
 
@@ -113,7 +116,9 @@ async function main(): Promise<void> {
     totalCost += a.costMicros;
     rows++;
   }
-  console.log(`Audit totals: ${rows} calls, ${totalIn} in + ${totalOut} out tokens, $${(Number(totalCost) / 1_000_000).toFixed(6)}`);
+  console.log(
+    `Audit totals: ${rows} calls, ${totalIn} in + ${totalOut} out tokens, $${(Number(totalCost) / 1_000_000).toFixed(6)}`
+  );
   process.exit(0);
 }
 

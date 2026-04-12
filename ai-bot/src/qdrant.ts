@@ -8,10 +8,10 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 import type { BotConfig } from './config.ts';
 
 export interface MessagePoint {
-  messageId: string;      // stringified bigint
+  messageId: string; // stringified bigint
   serverId: string;
   channelId: string;
-  threadId: string;       // '0' when message is top-level
+  threadId: string; // '0' when message is top-level
   authorIdentity: string; // hex
   createdAtMicros: string;
   content: string;
@@ -111,9 +111,7 @@ export class QdrantStore {
       vector,
       limit: opts.limit,
       filter: {
-        must: [
-          { key: 'serverId', match: { value: opts.serverId.toString() } },
-        ],
+        must: [{ key: 'serverId', match: { value: opts.serverId.toString() } }],
       },
       with_payload: true,
     });

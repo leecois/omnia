@@ -6,8 +6,8 @@
 //
 // Swapping providers is a one-line change in .env.local (AI_PROVIDER=gemini).
 
-import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 import type { BotConfig } from './config.ts';
 
 export interface ChatResult {
@@ -29,11 +29,11 @@ export interface LLMAdapter {
 const COST_PER_1M_TOKENS = {
   'text-embedding-3-small': { in: 0.02, out: 0 },
   'text-embedding-3-large': { in: 0.13, out: 0 },
-  'text-embedding-004':     { in: 0,    out: 0 }, // Gemini embeddings are free
-  'gpt-4o-mini':            { in: 0.15, out: 0.60 },
-  'gpt-4o':                 { in: 2.50, out: 10.0 },
-  'gemini-2.5-flash':       { in: 0.075, out: 0.30 },
-  'gemini-2.5-pro':         { in: 1.25, out: 5.00 },
+  'text-embedding-004': { in: 0, out: 0 }, // Gemini embeddings are free
+  'gpt-4o-mini': { in: 0.15, out: 0.6 },
+  'gpt-4o': { in: 2.5, out: 10.0 },
+  'gemini-2.5-flash': { in: 0.075, out: 0.3 },
+  'gemini-2.5-pro': { in: 1.25, out: 5.0 },
 } as const;
 
 function costMicros(model: string, inTok: number, outTok: number): bigint {
@@ -74,7 +74,7 @@ class OpenAIAdapter implements LLMAdapter {
       model: this.cfg.openaiChatModel,
       messages: [
         { role: 'system', content: system },
-        { role: 'user',   content: user },
+        { role: 'user', content: user },
       ],
       temperature: 0.3,
     });

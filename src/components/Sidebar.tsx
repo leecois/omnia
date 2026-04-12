@@ -1,22 +1,21 @@
-import { useState, useEffect } from 'react';
-import { generateAlias } from '../utils/alias';
-import { useReducer } from 'spacetimedb/react';
+import { useEffect, useState } from 'react';
+import { useReducer, useTable } from 'spacetimedb/react';
 import { reducers, tables } from '../module_bindings';
 import type {
-  Server,
-  Channel,
-  User,
-  ReadState,
-  Invite,
   Category,
-  ServerMember,
-  SuperAdmin,
-  SpecialChatRole,
-  ServerRole,
+  Channel,
+  Invite,
   MemberRole,
   Notification,
+  ReadState,
+  Server,
+  ServerMember,
+  ServerRole,
+  SpecialChatRole,
+  SuperAdmin,
+  User,
 } from '../module_bindings/types';
-import { useTable } from 'spacetimedb/react';
+import { generateAlias } from '../utils/alias';
 import ServerSettings from './ServerSettings';
 import SuperAdminPanel from './SuperAdminPanel';
 
@@ -142,9 +141,7 @@ export default function Sidebar({
                 onClick={e => e.stopPropagation()}
                 onChange={e => {
                   const id = BigInt(e.target.value);
-                  moveChannel({ channelId: channel.id, categoryId: id }).catch(
-                    console.error
-                  );
+                  moveChannel({ channelId: channel.id, categoryId: id }).catch(console.error);
                 }}
                 title="Move to category"
               >
@@ -179,26 +176,27 @@ export default function Sidebar({
     .filter(c => c.serverId === selectedServerId)
     .sort((a, b) => a.position - b.position);
   const uncategorized = channels.filter(c => c.categoryId === 0n);
-  const categoryGroups: Array<{ category: Category; channels: Channel[] }> =
-    serverCats.map(cat => ({
+  const categoryGroups: Array<{ category: Category; channels: Channel[] }> = serverCats.map(
+    cat => ({
       category: cat,
       channels: channels.filter(c => c.categoryId === cat.id),
-    }));
+    })
+  );
 
   const displayName =
     currentUser?.name ||
-    (currentUser
-      ? generateAlias(currentUser.identity.toHexString())
-      : 'unknown');
+    (currentUser ? generateAlias(currentUser.identity.toHexString()) : 'unknown');
 
-  const statusColor =
-    STATUS_OPTIONS.find(s => s.value === currentUser?.status)?.color ?? '#80848e';
+  const statusColor = STATUS_OPTIONS.find(s => s.value === currentUser?.status)?.color ?? '#80848e';
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nameDraft.trim()) return;
     setName({ name: nameDraft.trim() })
-      .then(() => { setShowNameEdit(false); setNameDraft(''); })
+      .then(() => {
+        setShowNameEdit(false);
+        setNameDraft('');
+      })
       .catch(console.error);
   };
 
@@ -220,7 +218,11 @@ export default function Sidebar({
         <div className="server-rail-scroll">
           {servers.map(server => {
             const initials = server.name
-              .split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+              .split(/\s+/)
+              .slice(0, 2)
+              .map(w => w[0])
+              .join('')
+              .toUpperCase();
             const active = server.id === selectedServerId;
             return (
               <button
@@ -234,8 +236,13 @@ export default function Sidebar({
             );
           })}
           {isSuperAdmin && (
-            <button className="server-icon server-icon-add" title="Create a Server"
-              onClick={() => setShowCreateServer(true)}>+</button>
+            <button
+              className="server-icon server-icon-add"
+              title="Create a Server"
+              onClick={() => setShowCreateServer(true)}
+            >
+              +
+            </button>
           )}
         </div>
       </nav>
@@ -354,8 +361,7 @@ export default function Sidebar({
                 </svg>
               </button>
               <div className="server-menu-divider" />
-              {selectedServer.ownerId.toHexString() ===
-              currentUser?.identity.toHexString() ? (
+              {selectedServer.ownerId.toHexString() === currentUser?.identity.toHexString() ? (
                 <button className="server-menu-item" disabled>
                   <span>You are the owner</span>
                 </button>
@@ -380,9 +386,7 @@ export default function Sidebar({
         )}
 
         <div className="channel-list">
-          {channels.length === 0 && (
-            <p className="channel-empty">No channels yet.</p>
-          )}
+          {channels.length === 0 && <p className="channel-empty">No channels yet.</p>}
 
           {/* Uncategorized channels */}
           {uncategorized.length > 0 && (
@@ -399,9 +403,7 @@ export default function Sidebar({
                   </button>
                 )}
               </div>
-              {uncategorized.map(channel =>
-                renderChannelItem(channel)
-              )}
+              {uncategorized.map(channel => renderChannelItem(channel))}
             </>
           )}
 
@@ -436,9 +438,7 @@ export default function Sidebar({
                               `Delete category "${category.name}"? Channels will become uncategorized.`
                             )
                           ) {
-                            deleteCategory({ categoryId: category.id }).catch(
-                              console.error
-                            );
+                            deleteCategory({ categoryId: category.id }).catch(console.error);
                           }
                         }}
                       >
@@ -462,7 +462,6 @@ export default function Sidebar({
             );
           })}
         </div>
-
       </aside>
 
       {/* Account Panel — spans server rail + channel panel at footer */}
@@ -472,10 +471,7 @@ export default function Sidebar({
           style={{ backgroundColor: currentUser?.avatarColor ?? '#5865F2' }}
         >
           {displayName[0]?.toUpperCase() ?? '?'}
-          <span
-            className="status-dot"
-            style={{ backgroundColor: statusColor }}
-          />
+          <span className="status-dot" style={{ backgroundColor: statusColor }} />
         </div>
         <div className="account-info">
           {showNameEdit ? (
@@ -500,16 +496,9 @@ export default function Sidebar({
               >
                 {displayName}
               </div>
-              <div
-                className="account-status"
-                onClick={() => setShowStatusMenu(v => !v)}
-              >
-                <span
-                  className="status-dot-sm"
-                  style={{ backgroundColor: statusColor }}
-                />
-                {STATUS_OPTIONS.find(s => s.value === currentUser?.status)?.label ??
-                  'Online'}
+              <div className="account-status" onClick={() => setShowStatusMenu(v => !v)}>
+                <span className="status-dot-sm" style={{ backgroundColor: statusColor }} />
+                {STATUS_OPTIONS.find(s => s.value === currentUser?.status)?.label ?? 'Online'}
               </div>
             </>
           )}
@@ -522,10 +511,12 @@ export default function Sidebar({
             onClick={() => setShowNotifications(v => !v)}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
             </svg>
             {notifications.length > 0 && (
-              <span className="notif-badge">{notifications.length > 9 ? '9+' : notifications.length}</span>
+              <span className="notif-badge">
+                {notifications.length > 9 ? '9+' : notifications.length}
+              </span>
             )}
           </button>
           {isSuperAdmin && (
@@ -538,12 +529,7 @@ export default function Sidebar({
                 setShowSuperAdminPanel(true);
               }}
             >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
               </svg>
             </button>
@@ -557,21 +543,13 @@ export default function Sidebar({
               onEditMyProfile();
             }}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19.738 10H22V14H19.739C19.498 14.931 19.1 15.798 18.565 16.564L20 18L18 20L16.564 18.564C15.798 19.099 14.932 19.498 14 19.738V22H10V19.738C9.069 19.498 8.202 19.099 7.436 18.564L6 20L4 18L5.435 16.564C4.9 15.799 4.502 14.932 4.262 14H2V10H4.262C4.502 9.068 4.9 8.202 5.436 7.436L4 6L6 4L7.436 5.436C8.202 4.9 9.068 4.502 10 4.262V2H14V4.261C14.932 4.502 15.797 4.9 16.565 5.435L18 3.999L20 6L18.564 7.436C19.099 8.202 19.498 9.069 19.738 10ZM12 16C14.209 16 16 14.209 16 12C16 9.791 14.209 8 12 8C9.791 8 8 9.791 8 12C8 14.209 9.791 16 12 16Z" />
             </svg>
           </button>
         </div>
         {showStatusMenu && (
-          <div
-            className="status-menu"
-            onMouseLeave={() => setShowStatusMenu(false)}
-          >
+          <div className="status-menu" onMouseLeave={() => setShowStatusMenu(false)}>
             {STATUS_OPTIONS.map(opt => (
               <button
                 key={opt.value}
@@ -581,10 +559,7 @@ export default function Sidebar({
                   setShowStatusMenu(false);
                 }}
               >
-                <span
-                  className="status-dot-sm"
-                  style={{ backgroundColor: opt.color }}
-                />
+                <span className="status-dot-sm" style={{ backgroundColor: opt.color }} />
                 {opt.label}
               </button>
             ))}
@@ -596,12 +571,7 @@ export default function Sidebar({
                 onEditMyProfile();
               }}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z" />
               </svg>
               Edit Profile
@@ -617,7 +587,7 @@ export default function Sidebar({
             <span>Notifications</span>
             <button className="notif-panel-close" onClick={() => setShowNotifications(false)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"/>
+                <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
               </svg>
             </button>
           </div>
@@ -628,12 +598,13 @@ export default function Sidebar({
               <div key={n.id.toString()} className="notif-row">
                 <div className="notif-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M14 8C14 10.21 12.21 12 10 12C7.79 12 6 10.21 6 8C6 5.79 7.79 4 10 4C12.21 4 14 5.79 14 8ZM10 14C7.33 14 2 15.34 2 18V20H18V18C18 15.34 12.67 14 10 14ZM18.41 10H21.5V8H18.41L19.41 7L18 5.59L15.59 8L18 10.41L19.41 9L18.41 10Z"/>
+                    <path d="M14 8C14 10.21 12.21 12 10 12C7.79 12 6 10.21 6 8C6 5.79 7.79 4 10 4C12.21 4 14 5.79 14 8ZM10 14C7.33 14 2 15.34 2 18V20H18V18C18 15.34 12.67 14 10 14ZM18.41 10H21.5V8H18.41L19.41 7L18 5.59L15.59 8L18 10.41L19.41 9L18.41 10Z" />
                   </svg>
                 </div>
                 <div className="notif-content">
                   <p className="notif-text">
-                    <strong>{n.senderName}</strong> invited you to join <strong>{n.serverName}</strong>
+                    <strong>{n.senderName}</strong> invited you to join{' '}
+                    <strong>{n.serverName}</strong>
                   </p>
                   <div className="notif-actions">
                     <button
@@ -652,7 +623,9 @@ export default function Sidebar({
                     </button>
                     <button
                       className="notif-btn notif-btn-dismiss"
-                      onClick={() => dismissNotification({ notificationId: n.id }).catch(console.error)}
+                      onClick={() =>
+                        dismissNotification({ notificationId: n.id }).catch(console.error)
+                      }
                     >
                       Dismiss
                     </button>
@@ -707,13 +680,16 @@ export default function Sidebar({
           invites={serverInvites as Invite[]}
           onClose={() => setShowInviteModal(false)}
           onCreateInvite={(maxUses, expiresInHours) =>
-            createInvite({ serverId: selectedServerId, maxUses, expiresInHours })
-              .catch(console.error)
+            createInvite({ serverId: selectedServerId, maxUses, expiresInHours }).catch(
+              console.error
+            )
           }
           onInviteUser={(userHex, inviteCode) => {
             const target = allUsers.find(u => u.identity.toHexString() === userHex);
             if (target) {
-              sendServerInvite({ targetIdentity: target.identity, inviteCode }).catch(console.error);
+              sendServerInvite({ targetIdentity: target.identity, inviteCode }).catch(
+                console.error
+              );
             }
           }}
         />
@@ -762,22 +738,11 @@ export default function Sidebar({
             m => m.serverId === selectedServer.id
           )}
           users={allUsers}
-          invites={(allInvites as Invite[]).filter(
-            inv => inv.serverId === selectedServer.id
-          )}
-          serverRoles={serverRoles.filter(
-            r => r.serverId === selectedServer.id
-          )}
-          memberRoles={memberRoles.filter(
-            r => r.serverId === selectedServer.id
-          )}
-          currentIdentityHex={
-            currentUser?.identity.toHexString() ?? ''
-          }
-          isOwner={
-            currentUser?.identity.toHexString() ===
-            selectedServer.ownerId.toHexString()
-          }
+          invites={(allInvites as Invite[]).filter(inv => inv.serverId === selectedServer.id)}
+          serverRoles={serverRoles.filter(r => r.serverId === selectedServer.id)}
+          memberRoles={memberRoles.filter(r => r.serverId === selectedServer.id)}
+          currentIdentityHex={currentUser?.identity.toHexString() ?? ''}
+          isOwner={currentUser?.identity.toHexString() === selectedServer.ownerId.toHexString()}
           isAdmin={isChannelAdmin}
           isSuperAdmin={isSuperAdmin}
           onClose={() => setShowServerSettings(false)}
@@ -841,16 +806,8 @@ function CreateServerModal({
 
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
-      <div
-        className="modal modal-create-server"
-        onMouseDown={e => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="modal-close-btn"
-          onClick={onClose}
-          aria-label="Close"
-        >
+      <div className="modal modal-create-server" onMouseDown={e => e.stopPropagation()}>
+        <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
           </svg>
@@ -860,8 +817,7 @@ function CreateServerModal({
           <>
             <h3>Create Your Server</h3>
             <p className="modal-subtitle">
-              Your server is where you and your friends hang out. Make yours
-              and start talking.
+              Your server is where you and your friends hang out. Make yours and start talking.
             </p>
 
             <div className="create-server-body">
@@ -870,21 +826,14 @@ function CreateServerModal({
                 className="create-server-option create-server-option-own"
                 onClick={() => pickTemplate(null)}
               >
-                <span
-                  className="create-server-option-icon"
-                  style={{ backgroundColor: '#3ba55c' }}
-                >
+                <span className="create-server-option-icon" style={{ backgroundColor: '#3ba55c' }}>
                   🏞️
                 </span>
-                <span className="create-server-option-label">
-                  Create My Own
-                </span>
+                <span className="create-server-option-label">Create My Own</span>
                 {chevron}
               </button>
 
-              <div className="create-server-section-header">
-                START FROM A TEMPLATE
-              </div>
+              <div className="create-server-section-header">START FROM A TEMPLATE</div>
 
               {SERVER_TEMPLATES.map(tpl => (
                 <button
@@ -899,23 +848,15 @@ function CreateServerModal({
                   >
                     {tpl.emoji}
                   </span>
-                  <span className="create-server-option-label">
-                    {tpl.label}
-                  </span>
+                  <span className="create-server-option-label">{tpl.label}</span>
                   {chevron}
                 </button>
               ))}
             </div>
 
             <div className="create-server-footer">
-              <p className="create-server-footer-title">
-                Have an invite already?
-              </p>
-              <button
-                type="button"
-                className="btn-wide"
-                onClick={() => setView('join')}
-              >
+              <p className="create-server-footer-title">Have an invite already?</p>
+              <button type="button" className="btn-wide" onClick={() => setView('join')}>
                 Join a Server
               </button>
             </div>
@@ -926,8 +867,7 @@ function CreateServerModal({
           <>
             <h3>Customize Your Server</h3>
             <p className="modal-subtitle">
-              Give your new server a name and description. You can always
-              change it later.
+              Give your new server a name and description. You can always change it later.
             </p>
             <form
               onSubmit={e => {
@@ -963,11 +903,7 @@ function CreateServerModal({
                 Public (anyone can join automatically)
               </label>
               <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setView('landing')}
-                >
+                <button type="button" className="btn-secondary" onClick={() => setView('landing')}>
                   Back
                 </button>
                 <button type="submit" className="btn-primary">
@@ -1005,11 +941,7 @@ function CreateServerModal({
                 />
               </label>
               <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setView('landing')}
-                >
+                <button type="button" className="btn-secondary" onClick={() => setView('landing')}>
                   Back
                 </button>
                 <button type="submit" className="btn-primary">
@@ -1037,21 +969,41 @@ function CreateChannelModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h3>Create a Channel</h3>
-        <form onSubmit={e => { e.preventDefault(); if (name.trim()) onCreate(name, topic); }}>
-          <label>Channel name
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            if (name.trim()) onCreate(name, topic);
+          }}
+        >
+          <label>
+            Channel name
             <div className="channel-name-input">
               <span>#</span>
-              <input autoFocus value={name} onChange={e => setName(e.target.value)}
-                placeholder="new-channel" maxLength={32} />
+              <input
+                autoFocus
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="new-channel"
+                maxLength={32}
+              />
             </div>
           </label>
-          <label>Topic (optional)
-            <input value={topic} onChange={e => setTopic(e.target.value)}
-              placeholder="What's this channel about?" maxLength={256} />
+          <label>
+            Topic (optional)
+            <input
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="What's this channel about?"
+              maxLength={256}
+            />
           </label>
           <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary">Create</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              Create
+            </button>
           </div>
         </form>
       </div>
@@ -1088,14 +1040,12 @@ function InviteModal({
   // Auto-create an invite when the modal first opens so it's ready to share
   useEffect(() => {
     if (invites.length === 0) onCreateInvite(0, 168);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Most recent active invite
   const activeInvite = invites.length > 0 ? invites[0] : null;
-  const inviteLink = activeInvite
-    ? `${window.location.origin}/invite/${activeInvite.code}`
-    : null;
+  const inviteLink = activeInvite ? `${window.location.origin}/invite/${activeInvite.code}` : null;
 
   const memberHexes = new Set(serverMembers.map(m => m.userIdentity.toHexString()));
   const nonMembers = allUsers.filter(u => {
@@ -1160,15 +1110,21 @@ function InviteModal({
           </div>
           <button className="invite-modal-close" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"/>
+              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
             </svg>
           </button>
         </div>
 
         {/* Search */}
         <div className="invite-modal-search-wrap">
-          <svg className="invite-modal-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          <svg
+            className="invite-modal-search-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
           </svg>
           <input
             className="invite-modal-search"
@@ -1226,10 +1182,7 @@ function InviteModal({
           {activeInvite && (
             <p className="invite-modal-link-footer">
               Your invite link {expireLabel()}.{' '}
-              <button
-                className="invite-modal-edit-link"
-                onClick={() => setShowLinkSettings(true)}
-              >
+              <button className="invite-modal-edit-link" onClick={() => setShowLinkSettings(true)}>
                 Edit invite link
               </button>
             </p>
@@ -1251,21 +1204,21 @@ function InviteLinkSettings({
   const [maxUses, setMaxUses] = useState(0);
 
   const EXPIRE_OPTIONS = [
-    { label: '1 hour',   value: 1 },
-    { label: '6 hours',  value: 6 },
+    { label: '1 hour', value: 1 },
+    { label: '6 hours', value: 6 },
     { label: '12 hours', value: 12 },
-    { label: '1 day',    value: 24 },
-    { label: '7 days',   value: 168 },
-    { label: '30 days',  value: 720 },
-    { label: 'Never',    value: 0 },
+    { label: '1 day', value: 24 },
+    { label: '7 days', value: 168 },
+    { label: '30 days', value: 720 },
+    { label: 'Never', value: 0 },
   ];
   const MAX_USES_OPTIONS = [
     { label: 'No limit', value: 0 },
-    { label: '1 use',    value: 1 },
-    { label: '5 uses',   value: 5 },
-    { label: '10 uses',  value: 10 },
-    { label: '25 uses',  value: 25 },
-    { label: '50 uses',  value: 50 },
+    { label: '1 use', value: 1 },
+    { label: '5 uses', value: 5 },
+    { label: '10 uses', value: 10 },
+    { label: '25 uses', value: 25 },
+    { label: '50 uses', value: 50 },
     { label: '100 uses', value: 100 },
   ];
 
@@ -1276,7 +1229,7 @@ function InviteLinkSettings({
           <h3>Server invite link settings</h3>
           <button className="invite-modal-close" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"/>
+              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
             </svg>
           </button>
         </div>
@@ -1291,11 +1244,19 @@ function InviteLinkSettings({
                 onChange={e => setExpiresInHours(Number(e.target.value))}
               >
                 {EXPIRE_OPTIONS.map(o => (
-                  <option key={o.label} value={o.value}>{o.label}</option>
+                  <option key={o.label} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
-              <svg className="invite-settings-select-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16.59 8.59L12 13.17L7.41 8.59L6 10L12 16L18 10L16.59 8.59Z"/>
+              <svg
+                className="invite-settings-select-chevron"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M16.59 8.59L12 13.17L7.41 8.59L6 10L12 16L18 10L16.59 8.59Z" />
               </svg>
             </div>
           </div>
@@ -1309,11 +1270,19 @@ function InviteLinkSettings({
                 onChange={e => setMaxUses(Number(e.target.value))}
               >
                 {MAX_USES_OPTIONS.map(o => (
-                  <option key={o.label} value={o.value}>{o.label}</option>
+                  <option key={o.label} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
-              <svg className="invite-settings-select-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16.59 8.59L12 13.17L7.41 8.59L6 10L12 16L18 10L16.59 8.59Z"/>
+              <svg
+                className="invite-settings-select-chevron"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M16.59 8.59L12 13.17L7.41 8.59L6 10L12 16L18 10L16.59 8.59Z" />
               </svg>
             </div>
           </div>
@@ -1322,7 +1291,8 @@ function InviteLinkSettings({
             <div className="invite-settings-toggle-text">
               <span className="invite-settings-toggle-label">Grant temporary membership</span>
               <span className="invite-settings-toggle-desc">
-                Temporary members are automatically kicked when they disconnect unless a role has been assigned
+                Temporary members are automatically kicked when they disconnect unless a role has
+                been assigned
               </span>
             </div>
             <div className="invite-settings-toggle-switch" />
@@ -1330,7 +1300,9 @@ function InviteLinkSettings({
         </div>
 
         <div className="invite-settings-footer">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button className="btn-primary" onClick={() => onGenerate(maxUses, expiresInHours)}>
             Generate a New Link
           </button>
@@ -1352,9 +1324,7 @@ function CreateCategoryModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h3>Create Category</h3>
-        <p className="modal-subtitle">
-          Group related channels together.
-        </p>
+        <p className="modal-subtitle">Group related channels together.</p>
         <form
           onSubmit={e => {
             e.preventDefault();
@@ -1399,9 +1369,7 @@ function NicknameModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h3>Change Nickname</h3>
-        <p className="modal-subtitle">
-          Your nickname will only appear in this server.
-        </p>
+        <p className="modal-subtitle">Your nickname will only appear in this server.</p>
         <form
           onSubmit={e => {
             e.preventDefault();

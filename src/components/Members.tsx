@@ -1,4 +1,4 @@
-import type { User, ServerMember } from '../module_bindings/types';
+import type { ServerMember, User } from '../module_bindings/types';
 import { generateAlias } from '../utils/alias';
 
 interface MembersProps {
@@ -23,13 +23,9 @@ export default function Members({
   onOpenProfile,
 }: MembersProps) {
   const memberHexes = new Set(members.map(m => m.userIdentity.toHexString()));
-  const memberNickname = new Map(
-    members.map(m => [m.userIdentity.toHexString(), m.nickname])
-  );
+  const memberNickname = new Map(members.map(m => [m.userIdentity.toHexString(), m.nickname]));
 
-  const serverUsers = users.filter(u =>
-    memberHexes.has(u.identity.toHexString())
-  );
+  const serverUsers = users.filter(u => memberHexes.has(u.identity.toHexString()));
 
   const online = serverUsers
     .filter(u => u.online && u.status !== 'invisible')
@@ -54,16 +50,12 @@ export default function Members({
         ))}
         {offline.length > 0 && (
           <>
-            <div className="member-group-header">
-              OFFLINE — {offline.length}
-            </div>
+            <div className="member-group-header">OFFLINE — {offline.length}</div>
             {offline.map(u => (
               <MemberRow
                 key={u.identity.toHexString()}
                 user={u}
-                nickname={
-                  memberNickname.get(u.identity.toHexString()) ?? undefined
-                }
+                nickname={memberNickname.get(u.identity.toHexString()) ?? undefined}
                 isSelf={u.identity.toHexString() === currentIdentityHex}
                 onOpenProfile={onOpenProfile}
                 muted
@@ -89,18 +81,15 @@ function MemberRow({
   muted?: boolean;
   onOpenProfile: (user: User, rect: DOMRect) => void;
 }) {
-  const display =
-    nickname || user.name || generateAlias(user.identity.toHexString());
+  const display = nickname || user.name || generateAlias(user.identity.toHexString());
   const statusColor =
     user.online && user.status !== 'invisible'
-      ? STATUS_COLOR[user.status] ?? '#80848e'
+      ? (STATUS_COLOR[user.status] ?? '#80848e')
       : STATUS_COLOR.offline;
   return (
     <div
       className={`member-row ${muted ? 'muted' : ''}`}
-      onClick={e =>
-        onOpenProfile(user, (e.currentTarget as HTMLElement).getBoundingClientRect())
-      }
+      onClick={e => onOpenProfile(user, (e.currentTarget as HTMLElement).getBoundingClientRect())}
     >
       <div className="member-avatar" style={{ backgroundColor: user.avatarColor ?? '#5865F2' }}>
         {display[0]?.toUpperCase()}

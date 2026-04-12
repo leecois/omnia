@@ -60,10 +60,7 @@ export function navigateTo(
 ): void {
   let messageId: bigint | null = null;
   let options = opts;
-  if (
-    typeof messageIdOrOpts === 'bigint' ||
-    messageIdOrOpts === null
-  ) {
+  if (typeof messageIdOrOpts === 'bigint' || messageIdOrOpts === null) {
     messageId = messageIdOrOpts;
   } else {
     options = messageIdOrOpts;
@@ -89,18 +86,12 @@ export function parseInviteRoute(pathname: string): string | null {
 }
 
 /** Build a shareable absolute URL for a specific message. */
-export function buildMessageLink(
-  serverId: bigint,
-  channelId: bigint,
-  messageId: bigint
-): string {
+export function buildMessageLink(serverId: bigint, channelId: bigint, messageId: bigint): string {
   return `${window.location.origin}${buildPath(serverId, channelId, messageId)}`;
 }
 
 export function useRoute(): Route {
-  const [route, setRoute] = useState<Route>(() =>
-    parseRoute(window.location.pathname)
-  );
+  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.pathname));
 
   useEffect(() => {
     const sync = () => setRoute(parseRoute(window.location.pathname));

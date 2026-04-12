@@ -8,8 +8,8 @@
 // Usage:  bun --env-file=../.env.local run src/verify.ts
 
 import { loadConfig } from './config.ts';
-import { connectBot, subscribeAll } from './spacetime.ts';
 import { QdrantStore } from './qdrant.ts';
+import { connectBot, subscribeAll } from './spacetime.ts';
 
 async function main(): Promise<void> {
   const cfg = loadConfig();
@@ -49,7 +49,9 @@ async function main(): Promise<void> {
       total++;
       if (m.authorId.toHexString() === identityHex) byBot++;
     }
-    console.log(`  server ${c.serverId}: ${total} total, ${byBot} by bot, ${total - byBot} by humans`);
+    console.log(
+      `  server ${c.serverId}: ${total} total, ${byBot} by bot, ${total - byBot} by humans`
+    );
   }
   console.log();
 
@@ -65,9 +67,12 @@ async function main(): Promise<void> {
     console.log(`  ${status}: ${count}`);
   }
   console.log('  recent:');
-  rows.sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, 5).forEach(r => {
-    console.log(`    #${r.id} [${r.status}] "${r.question.slice(0, 60)}…"`);
-  });
+  rows
+    .sort((a, b) => (a.id < b.id ? 1 : -1))
+    .slice(0, 5)
+    .forEach(r => {
+      console.log(`    #${r.id} [${r.status}] "${r.question.slice(0, 60)}…"`);
+    });
   console.log();
 
   // ── ai_audit totals ──────────────────────────────────────────────────
@@ -82,7 +87,9 @@ async function main(): Promise<void> {
     totalCost += a.costMicros;
     auditRows++;
   }
-  console.log(`  ${auditRows} audit rows, ${totalIn} in + ${totalOut} out tokens, $${(Number(totalCost) / 1_000_000).toFixed(6)}\n`);
+  console.log(
+    `  ${auditRows} audit rows, ${totalIn} in + ${totalOut} out tokens, $${(Number(totalCost) / 1_000_000).toFixed(6)}\n`
+  );
 
   // ── Qdrant ───────────────────────────────────────────────────────────
   console.log('QDRANT:');
@@ -121,7 +128,7 @@ async function main(): Promise<void> {
   const testCase = async (
     name: string,
     args: { channelId: bigint; threadId: bigint; question: string },
-    expectSuccess: boolean,
+    expectSuccess: boolean
   ): Promise<void> => {
     process.stdout.write(`  ${name.padEnd(38)} `);
     try {
@@ -141,22 +148,22 @@ async function main(): Promise<void> {
   await testCase(
     'empty question (should fail)',
     { channelId: testChannelId, threadId: 0n, question: '   ' },
-    false,
+    false
   );
   await testCase(
     'very long question (should fail)',
     { channelId: testChannelId, threadId: 0n, question: 'x'.repeat(3000) },
-    false,
+    false
   );
   await testCase(
     'unknown channel (should fail)',
     { channelId: 999_999_999n, threadId: 0n, question: 'hi?' },
-    false,
+    false
   );
   await testCase(
     'normal question (should succeed)',
     { channelId: testChannelId, threadId: 0n, question: 'VERIFY_SMOKE_TEST: what is Omnia about?' },
-    true,
+    true
   );
 
   console.log('\nwaiting 8 s for the bot to handle the verification request…');

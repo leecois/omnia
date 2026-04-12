@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import App from './App';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
+import { describe, expect, it } from 'vitest';
+import App from './App';
 import { DbConnection } from './module_bindings';
 
 describe('App', () => {

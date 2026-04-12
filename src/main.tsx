@@ -1,10 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import App from './App.tsx';
-import { Identity } from 'spacetimedb';
+import type { Identity } from 'spacetimedb';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
-import { DbConnection, ErrorContext } from './module_bindings/index.ts';
+import App from './App.tsx';
+import { DbConnection, type ErrorContext } from './module_bindings/index.ts';
 
 const HOST = import.meta.env.VITE_SPACETIMEDB_HOST ?? 'ws://localhost:3000';
 const DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME ?? 'quickstart-chat';

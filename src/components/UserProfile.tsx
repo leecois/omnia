@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { generateAlias } from '../utils/alias';
 import { useReducer } from 'spacetimedb/react';
 import { reducers } from '../module_bindings';
-import type { User, ServerMember } from '../module_bindings/types';
+import type { ServerMember, User } from '../module_bindings/types';
+import { generateAlias } from '../utils/alias';
 
 const STATUS_INFO: Record<string, { label: string; color: string }> = {
   online: { label: 'Online', color: '#23a55a' },
@@ -76,21 +76,14 @@ export default function UserProfile({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const displayName =
-    member?.nickname ||
-    user.name ||
-    generateAlias(user.identity.toHexString());
+  const displayName = member?.nickname || user.name || generateAlias(user.identity.toHexString());
 
   const statusKey = user.online ? user.status : 'offline';
   const statusInfo = STATUS_INFO[statusKey] ?? STATUS_INFO.offline;
 
-  const createdDate = new Date(
-    Number(user.createdAt.microsSinceUnixEpoch / 1000n)
-  );
+  const createdDate = new Date(Number(user.createdAt.microsSinceUnixEpoch / 1000n));
 
-  const joinedDate = member
-    ? new Date(Number(member.joinedAt.microsSinceUnixEpoch / 1000n))
-    : null;
+  const joinedDate = member ? new Date(Number(member.joinedAt.microsSinceUnixEpoch / 1000n)) : null;
 
   const roleLabel = member?.role ?? null;
 
@@ -103,20 +96,11 @@ export default function UserProfile({
         style={{ top: pos.top, left: pos.left, width: PANEL_WIDTH }}
         onClick={e => e.stopPropagation()}
       >
-        <div
-          className="profile-banner"
-          style={{ backgroundColor: user.avatarColor }}
-        />
+        <div className="profile-banner" style={{ backgroundColor: user.avatarColor }} />
         <div className="profile-avatar-wrap">
-          <div
-            className="profile-avatar"
-            style={{ backgroundColor: user.avatarColor }}
-          >
+          <div className="profile-avatar" style={{ backgroundColor: user.avatarColor }}>
             {displayName[0]?.toUpperCase() ?? '?'}
-            <span
-              className="profile-status-dot"
-              style={{ backgroundColor: statusInfo.color }}
-            />
+            <span className="profile-status-dot" style={{ backgroundColor: statusInfo.color }} />
           </div>
         </div>
 
@@ -132,21 +116,14 @@ export default function UserProfile({
           {user.name && (
             <div className="profile-username">
               {user.name}
-              {user.pronouns && (
-                <span className="profile-pronouns"> · {user.pronouns}</span>
-              )}
+              {user.pronouns && <span className="profile-pronouns"> · {user.pronouns}</span>}
             </div>
           )}
           {!user.name && user.pronouns && (
-            <div className="profile-username profile-pronouns">
-              {user.pronouns}
-            </div>
+            <div className="profile-username profile-pronouns">{user.pronouns}</div>
           )}
           <div className="profile-status-line">
-            <span
-              className="profile-status-dot-sm"
-              style={{ backgroundColor: statusInfo.color }}
-            />
+            <span className="profile-status-dot-sm" style={{ backgroundColor: statusInfo.color }} />
             {statusInfo.label}
           </div>
 
@@ -211,13 +188,7 @@ export default function UserProfile({
 
 // ─── EditProfileModal ─────────────────────────────────────────────────────────
 
-export function EditProfileModal({
-  user,
-  onClose,
-}: {
-  user: User;
-  onClose: () => void;
-}) {
+export function EditProfileModal({ user, onClose }: { user: User; onClose: () => void }) {
   const setProfile = useReducer(reducers.setProfile);
   const [bio, setBio] = useState(user.bio);
   const [pronouns, setPronouns] = useState(user.pronouns);
@@ -235,9 +206,7 @@ export function EditProfileModal({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h3>Edit Profile</h3>
-        <p className="modal-subtitle">
-          Your profile is visible to everyone on Omnia.
-        </p>
+        <p className="modal-subtitle">Your profile is visible to everyone on Omnia.</p>
         <form onSubmit={submit}>
           <label>
             Pronouns

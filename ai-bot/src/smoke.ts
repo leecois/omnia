@@ -45,7 +45,7 @@ async function main(): Promise<void> {
       createdAtMicros: '0',
       content: TEST_CONTENT,
     },
-    messageVec,
+    messageVec
   );
 
   // Give Qdrant a moment to index the point.
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   console.log('[5/6] running a chat completion');
   const answer = await llm.chat(
     'You are a concise assistant.',
-    `Context: ${TEST_CONTENT}\n\nQuestion: ${TEST_QUERY}\n\nAnswer briefly.`,
+    `Context: ${TEST_CONTENT}\n\nQuestion: ${TEST_QUERY}\n\nAnswer briefly.`
   );
   console.log(`       → answer: "${answer.text.slice(0, 120)}"`);
   console.log(`       → tokens: ${answer.inputTokens} in, ${answer.outputTokens} out`);

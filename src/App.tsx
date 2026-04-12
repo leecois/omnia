@@ -1,19 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useSpacetimeDB, useTable, useReducer } from 'spacetimedb/react';
-import { tables, reducers } from './module_bindings';
-import { useRoute, navigateTo, parseInviteRoute } from './hooks/useRoute';
-import type {
-  ReadState,
-  ServerMember,
-  Typing,
-  User,
-} from './module_bindings/types';
-import Sidebar from './components/Sidebar';
+import { useEffect, useMemo, useState } from 'react';
+import { useReducer, useSpacetimeDB, useTable } from 'spacetimedb/react';
 import Chat from './components/Chat';
-import Members from './components/Members';
-import UserProfile, { EditProfileModal } from './components/UserProfile';
 import DevAdminModal from './components/DevAdminModal';
+import Members from './components/Members';
+import Sidebar from './components/Sidebar';
 import SuperAdminBanner from './components/SuperAdminBanner';
+import UserProfile, { EditProfileModal } from './components/UserProfile';
+import { navigateTo, parseInviteRoute, useRoute } from './hooks/useRoute';
+import { reducers, tables } from './module_bindings';
+import type { ReadState, ServerMember, Typing, User } from './module_bindings/types';
 import './App.css';
 
 export interface ProfileAnchor {
@@ -76,7 +71,7 @@ export default function App() {
         console.error('Invite join failed:', err);
         alert('Could not join: invite may be invalid or expired.');
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, pendingInviteCode, inviteHandled]);
 
   const { serverId: routeServerId, channelId: routeChannelId } = useRoute();
@@ -146,9 +141,7 @@ export default function App() {
     if (isSuperAdmin) return true;
     // Server owners always have write access
     const myMembership = allMembers.find(
-      m =>
-        m.serverId === serverId &&
-        m.userIdentity.toHexString() === myHex
+      m => m.serverId === serverId && m.userIdentity.toHexString() === myHex
     );
     if (myMembership?.role === 'owner') return true;
     const perms = myPermissionsByServer.get(serverId.toString()) ?? 0n;
@@ -178,10 +171,7 @@ export default function App() {
   // Validate server from URL — if invalid or missing, auto-select first joined
   useEffect(() => {
     if (joinedServers.length === 0) return;
-    if (
-      routeServerId !== null &&
-      myServerIds.has(routeServerId.toString())
-    ) {
+    if (routeServerId !== null && myServerIds.has(routeServerId.toString())) {
       return;
     }
     navigateTo(joinedServers[0].id, null, { replace: true });
@@ -199,10 +189,7 @@ export default function App() {
   // Validate channel from URL — if missing or not in current server, auto-select first
   useEffect(() => {
     if (selectedServerId === null) return;
-    if (
-      selectedChannelId !== null &&
-      serverChannels.some(c => c.id === selectedChannelId)
-    ) {
+    if (selectedChannelId !== null && serverChannels.some(c => c.id === selectedChannelId)) {
       return;
     }
     if (serverChannels.length > 0) {
@@ -216,21 +203,17 @@ export default function App() {
   // Members of the selected server
   const serverMembers = useMemo(
     () =>
-      selectedServerId !== null
-        ? allMembers.filter(m => m.serverId === selectedServerId)
-        : [],
+      selectedServerId !== null ? allMembers.filter(m => m.serverId === selectedServerId) : [],
     [allMembers, selectedServerId]
   );
 
   // Current user's role in the selected server
   const myServerMember = useMemo(
-    () =>
-      serverMembers.find(m => m.userIdentity.toHexString() === myHex) ?? null,
+    () => serverMembers.find(m => m.userIdentity.toHexString() === myHex) ?? null,
     [serverMembers, myHex]
   );
   const isChannelAdmin =
-    myServerMember !== null &&
-    (myServerMember.role === 'owner' || myServerMember.role === 'admin');
+    myServerMember !== null && (myServerMember.role === 'owner' || myServerMember.role === 'admin');
   const myServerNickname = myServerMember?.nickname ?? '';
 
   // Read states keyed by channelId for unread badges
@@ -269,8 +252,7 @@ export default function App() {
 
   const selectedServer = servers.find(s => s.id === selectedServerId) ?? null;
   const selectedChannel = serverChannels.find(c => c.id === selectedChannelId) ?? null;
-  const currentUser =
-    users.find(u => u.identity.toHexString() === myHex) ?? null;
+  const currentUser = users.find(u => u.identity.toHexString() === myHex) ?? null;
 
   return (
     <>
@@ -278,99 +260,92 @@ export default function App() {
       <div
         className={`app ${showMembers ? '' : 'members-hidden'} ${isSuperAdmin ? 'sa-active' : ''}`}
       >
-      <Sidebar
-        servers={joinedServers}
-        channels={serverChannels}
-        categories={categories}
-        isChannelAdmin={isChannelAdmin}
-        isSuperAdmin={isSuperAdmin}
-        superAdmins={superAdmins}
-        specialChatRoles={specialChatRoles}
-        serverRoles={serverRoles}
-        memberRoles={memberRoles}
-        allUsers={users}
-        myServerNickname={myServerNickname}
-        selectedServerId={selectedServerId}
-        selectedChannelId={selectedChannelId}
-        onSelectServer={id => {
-          // Pre-compute the first channel for this server so we land directly
-          // on /c/:serverId/:channelId with a single history entry.
-          const first = channels
-            .filter(c => c.serverId === id)
-            .sort((a, b) => a.position - b.position)[0];
-          navigateTo(id, first?.id ?? null);
-        }}
-        onSelectChannel={id => navigateTo(selectedServerId, id)}
-        selectedServer={selectedServer}
-        currentUser={currentUser}
-        myReadStates={myReadStates}
-        notifications={allNotifications.filter(n => n.recipientIdentity.toHexString() === myHex)}
-        onEditMyProfile={() => setShowEditProfile(true)}
-      />
-      {selectedChannel ? (
-        <Chat
-          channel={selectedChannel}
-          users={users}
-          threads={threads}
-          reactions={reactions}
-          typingUsers={channelTypers as Typing[]}
-          serverMembers={serverMembers as ServerMember[]}
+        <Sidebar
+          servers={joinedServers}
+          channels={serverChannels}
+          categories={categories}
           isChannelAdmin={isChannelAdmin}
-          currentIdentityHex={myHex}
-          canWrite={canWriteInServer(selectedChannel.serverId)}
-          activeThreadId={activeThreadId}
-          onOpenThread={setActiveThreadId}
-          onCloseThread={() => setActiveThreadId(null)}
-          onOpenProfile={(u, r) => setActiveProfile({ user: u, rect: r })}
-          showMembers={showMembers}
-          onToggleMembers={() => setShowMembers(v => !v)}
-        />
-      ) : (
-        <>
-          <header className="chat-header empty" />
-          <main className="chat-main empty-state">
-            <h2># no channel selected</h2>
-            <p>Pick a channel from the sidebar, or join a server using an invite code.</p>
-          </main>
-        </>
-      )}
-      {showMembers && (
-        <Members
-          users={users}
-          members={serverMembers as ServerMember[]}
-          currentIdentityHex={myHex}
-          onOpenProfile={(u, r) => setActiveProfile({ user: u, rect: r })}
-        />
-      )}
-
-      {activeProfile && (
-        <UserProfile
-          user={activeProfile.user}
-          member={
-            (serverMembers as ServerMember[]).find(
-              m =>
-                m.userIdentity.toHexString() ===
-                activeProfile.user.identity.toHexString()
-            ) ?? null
-          }
-          anchorRect={activeProfile.rect}
-          isMe={
-            activeProfile.user.identity.toHexString() === myHex
-          }
-          onClose={() => setActiveProfile(null)}
-          onEditProfile={() => {
-            setActiveProfile(null);
-            setShowEditProfile(true);
+          isSuperAdmin={isSuperAdmin}
+          superAdmins={superAdmins}
+          specialChatRoles={specialChatRoles}
+          serverRoles={serverRoles}
+          memberRoles={memberRoles}
+          allUsers={users}
+          myServerNickname={myServerNickname}
+          selectedServerId={selectedServerId}
+          selectedChannelId={selectedChannelId}
+          onSelectServer={id => {
+            // Pre-compute the first channel for this server so we land directly
+            // on /c/:serverId/:channelId with a single history entry.
+            const first = channels
+              .filter(c => c.serverId === id)
+              .sort((a, b) => a.position - b.position)[0];
+            navigateTo(id, first?.id ?? null);
           }}
+          onSelectChannel={id => navigateTo(selectedServerId, id)}
+          selectedServer={selectedServer}
+          currentUser={currentUser}
+          myReadStates={myReadStates}
+          notifications={allNotifications.filter(n => n.recipientIdentity.toHexString() === myHex)}
+          onEditMyProfile={() => setShowEditProfile(true)}
         />
-      )}
+        {selectedChannel ? (
+          <Chat
+            channel={selectedChannel}
+            users={users}
+            threads={threads}
+            reactions={reactions}
+            typingUsers={channelTypers as Typing[]}
+            serverMembers={serverMembers as ServerMember[]}
+            isChannelAdmin={isChannelAdmin}
+            currentIdentityHex={myHex}
+            canWrite={canWriteInServer(selectedChannel.serverId)}
+            activeThreadId={activeThreadId}
+            onOpenThread={setActiveThreadId}
+            onCloseThread={() => setActiveThreadId(null)}
+            onOpenProfile={(u, r) => setActiveProfile({ user: u, rect: r })}
+            showMembers={showMembers}
+            onToggleMembers={() => setShowMembers(v => !v)}
+          />
+        ) : (
+          <>
+            <header className="chat-header empty" />
+            <main className="chat-main empty-state">
+              <h2># no channel selected</h2>
+              <p>Pick a channel from the sidebar, or join a server using an invite code.</p>
+            </main>
+          </>
+        )}
+        {showMembers && (
+          <Members
+            users={users}
+            members={serverMembers as ServerMember[]}
+            currentIdentityHex={myHex}
+            onOpenProfile={(u, r) => setActiveProfile({ user: u, rect: r })}
+          />
+        )}
 
-      {showEditProfile && currentUser && (
-        <EditProfileModal
-          user={currentUser}
-          onClose={() => setShowEditProfile(false)}
-        />
-      )}
+        {activeProfile && (
+          <UserProfile
+            user={activeProfile.user}
+            member={
+              (serverMembers as ServerMember[]).find(
+                m => m.userIdentity.toHexString() === activeProfile.user.identity.toHexString()
+              ) ?? null
+            }
+            anchorRect={activeProfile.rect}
+            isMe={activeProfile.user.identity.toHexString() === myHex}
+            onClose={() => setActiveProfile(null)}
+            onEditProfile={() => {
+              setActiveProfile(null);
+              setShowEditProfile(true);
+            }}
+          />
+        )}
+
+        {showEditProfile && currentUser && (
+          <EditProfileModal user={currentUser} onClose={() => setShowEditProfile(false)} />
+        )}
       </div>
 
       <DevAdminModal

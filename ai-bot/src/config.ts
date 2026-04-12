@@ -63,7 +63,7 @@ function optNum(name: string, fallback: number): number {
 }
 
 export function loadConfig(): BotConfig {
-  const provider = (opt('AI_PROVIDER', 'openai').toLowerCase()) as Provider;
+  const provider = opt('AI_PROVIDER', 'openai').toLowerCase() as Provider;
   if (provider !== 'openai' && provider !== 'gemini') {
     throw new Error(`AI_PROVIDER must be 'openai' or 'gemini', got: ${provider}`);
   }
@@ -91,7 +91,10 @@ export function loadConfig(): BotConfig {
     openaiEmbeddingModel: opt('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
     openaiChatModel: opt('OPENAI_CHAT_MODEL', 'gpt-4o-mini'),
 
-    geminiApiKey: provider === 'gemini' ? req('GOOGLE_GENERATIVE_AI_API_KEY') : opt('GOOGLE_GENERATIVE_AI_API_KEY') || null,
+    geminiApiKey:
+      provider === 'gemini'
+        ? req('GOOGLE_GENERATIVE_AI_API_KEY')
+        : opt('GOOGLE_GENERATIVE_AI_API_KEY') || null,
     geminiEmbeddingModel: opt('GEMINI_EMBEDDING_MODEL', 'text-embedding-004'),
     geminiChatModel: opt('GEMINI_CHAT_MODEL', 'gemini-2.5-flash'),
 

@@ -6,7 +6,8 @@ async function main() {
   const cfg = loadConfig();
   const { conn } = await connectBot(cfg);
   await new Promise<void>((resolve, reject) => {
-    conn.subscriptionBuilder()
+    conn
+      .subscriptionBuilder()
       .onApplied(() => resolve())
       .onError(ctx => reject(ctx.event))
       .subscribe(['SELECT * FROM ai_config', 'SELECT * FROM server']);
@@ -26,4 +27,7 @@ async function main() {
   console.log('Done — AI is now enabled on server #1');
   process.exit(0);
 }
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

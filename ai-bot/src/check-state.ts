@@ -8,7 +8,8 @@ async function main(): Promise<void> {
   const cfg = loadConfig();
   const { conn } = await connectBot(cfg);
   await new Promise<void>((resolve, reject) => {
-    conn.subscriptionBuilder()
+    conn
+      .subscriptionBuilder()
       .onApplied(() => resolve())
       .onError(ctx => reject(ctx.event ?? new Error('sub error')))
       .subscribe([
@@ -27,7 +28,10 @@ async function main(): Promise<void> {
   let n = 0;
   for (const c of conn.db.channel.iter()) {
     console.log(`  #${c.id}  ${c.name}  (server ${c.serverId})`);
-    if (++n > 20) { console.log('  …'); break; }
+    if (++n > 20) {
+      console.log('  …');
+      break;
+    }
   }
   console.log('\nSUPER ADMINS:');
   for (const sa of conn.db.super_admin.iter()) {
@@ -36,10 +40,18 @@ async function main(): Promise<void> {
   console.log('\nUSERS:');
   let u = 0;
   for (const user of conn.db.user.iter()) {
-    console.log(`  ${user.identity.toHexString()}   name=${user.name ?? '(anon)'}   online=${user.online}`);
-    if (++u > 10) { console.log('  …'); break; }
+    console.log(
+      `  ${user.identity.toHexString()}   name=${user.name ?? '(anon)'}   online=${user.online}`
+    );
+    if (++u > 10) {
+      console.log('  …');
+      break;
+    }
   }
   process.exit(0);
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

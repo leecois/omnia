@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Omnia — Discord clone on SpacetimeDB  (Milestone 3)
 // ─────────────────────────────────────────────────────────────────────────────
-import { schema, t, table, SenderError } from 'spacetimedb/server';
+import { SenderError, schema, t, table } from 'spacetimedb/server';
 
 // ============================================================================
 // TABLES
@@ -13,9 +13,9 @@ const user = table(
     identity: t.identity().primaryKey(),
     name: t.string().optional(),
     avatarColor: t.string(),
-    bio: t.string(),        // profile bio, '' = empty
-    pronouns: t.string(),   // profile pronouns, '' = empty
-    status: t.string(),     // 'online' | 'idle' | 'dnd' | 'invisible'
+    bio: t.string(), // profile bio, '' = empty
+    pronouns: t.string(), // profile pronouns, '' = empty
+    status: t.string(), // 'online' | 'idle' | 'dnd' | 'invisible'
     online: t.bool(),
     createdAt: t.timestamp(),
     lastSeen: t.timestamp(),
@@ -32,9 +32,9 @@ const server = table(
     isPublic: t.bool(),
     createdAt: t.timestamp(),
     // Appended fields — keep at the end so additive migrations succeed
-    iconUrl: t.string().default('none'),             // 'none' = fallback to initial letter
-    bannerColor: t.string().default('#5865f2'),      // default blurple banner
-    traits: t.string().default('none'),              // 'none' = no traits
+    iconUrl: t.string().default('none'), // 'none' = fallback to initial letter
+    bannerColor: t.string().default('#5865f2'), // default blurple banner
+    traits: t.string().default('none'), // 'none' = no traits
   }
 );
 
@@ -57,9 +57,9 @@ const channel = table(
     name: t.string(),
     topic: t.string(),
     position: t.i32(),
-    categoryId: t.u64(),        // 0n = uncategorized
-    slowmodeSeconds: t.i32(),   // 0 = no slowmode (max 21600 = 6h)
-    lastMessageId: t.u64(),     // 0n = no messages yet
+    categoryId: t.u64(), // 0n = uncategorized
+    slowmodeSeconds: t.i32(), // 0 = no slowmode (max 21600 = 6h)
+    lastMessageId: t.u64(), // 0n = no messages yet
     createdAt: t.timestamp(),
   }
 );
@@ -161,8 +161,8 @@ const message = table(
   {
     id: t.u64().primaryKey().autoInc(),
     channelId: t.u64(),
-    threadId: t.u64(),      // 0n = top-level channel message
-    replyToId: t.u64(),     // 0n = no reply
+    threadId: t.u64(), // 0n = top-level channel message
+    replyToId: t.u64(), // 0n = no reply
     authorId: t.identity(),
     text: t.string(),
     attachmentUrl: t.string(), // '' = no attachment
@@ -306,10 +306,10 @@ const server_role = table(
     id: t.u64().primaryKey().autoInc(),
     serverId: t.u64(),
     name: t.string(),
-    color: t.string(),       // hex like '#5865f2' or '' for default
-    position: t.i32(),       // ordering, higher = higher in hierarchy
-    permissions: t.u64(),    // bitfield — see PERMISSIONS constants below
-    isDefault: t.bool(),     // true for @everyone (cannot be deleted)
+    color: t.string(), // hex like '#5865f2' or '' for default
+    position: t.i32(), // ordering, higher = higher in hierarchy
+    permissions: t.u64(), // bitfield — see PERMISSIONS constants below
+    isDefault: t.bool(), // true for @everyone (cannot be deleted)
   }
 );
 
@@ -360,8 +360,8 @@ const notification = table(
   {
     id: t.u64().primaryKey().autoInc(),
     recipientIdentity: t.identity(),
-    type: t.string(),        // 'server_invite'
-    inviteCode: t.string(),  // code to pass to join_server
+    type: t.string(), // 'server_invite'
+    inviteCode: t.string(), // code to pass to join_server
     serverId: t.u64(),
     serverName: t.string(),
     senderName: t.string(),
@@ -390,7 +390,7 @@ const ai_config = table(
     enabled: t.bool(),
     askEnabled: t.bool(),
     summarizeEnabled: t.bool(),
-    monthlyTokenBudget: t.u64(),      // 0 = unlimited
+    monthlyTokenBudget: t.u64(), // 0 = unlimited
     tokensUsedThisMonth: t.u64(),
     // Which channels the bot should index as "docs" sources.
     // Stored as a comma-separated list of channel IDs to stay schema-simple.
@@ -424,14 +424,14 @@ const ask_request = table(
     id: t.u64().primaryKey().autoInc(),
     serverId: t.u64(),
     channelId: t.u64(),
-    threadId: t.u64(),                // 0n = channel-level, non-zero = inside a thread
+    threadId: t.u64(), // 0n = channel-level, non-zero = inside a thread
     userIdentity: t.identity(),
     question: t.string(),
-    status: t.string(),               // 'pending' | 'answered' | 'failed'
-    answerMessageId: t.u64(),         // 0n until answered
-    errorMessage: t.string(),         // populated on 'failed'
+    status: t.string(), // 'pending' | 'answered' | 'failed'
+    answerMessageId: t.u64(), // 0n until answered
+    errorMessage: t.string(), // populated on 'failed'
     createdAt: t.timestamp(),
-    answeredAt: t.timestamp(),        // epoch 0 until answered
+    answeredAt: t.timestamp(), // epoch 0 until answered
     // Appended — additive migration for existing deployments.
     // The ID of the message that holds the user's question. The bot
     // uses this as replyToId when posting the answer so the
@@ -457,10 +457,10 @@ const ai_audit = table(
     id: t.u64().primaryKey().autoInc(),
     userIdentity: t.identity(),
     serverId: t.u64(),
-    feature: t.string(),              // 'ask' | 'summarize' | 'search'
+    feature: t.string(), // 'ask' | 'summarize' | 'search'
     inputTokens: t.u32(),
     outputTokens: t.u32(),
-    costMicros: t.u64(),              // USD cost × 1_000_000 (keeps it an integer)
+    costMicros: t.u64(), // USD cost × 1_000_000 (keeps it an integer)
     createdAt: t.timestamp(),
   }
 );
@@ -485,7 +485,7 @@ const ai_audit = table(
 const dev_admin_secret = table(
   { name: 'dev_admin_secret', public: false },
   {
-    id: t.u64().primaryKey(),   // always 1 — single-row table
+    id: t.u64().primaryKey(), // always 1 — single-row table
     secret: t.string(),
     updatedAt: t.timestamp(),
   }
@@ -548,8 +548,14 @@ export default spacetimedb;
 // ============================================================================
 
 const AVATAR_PALETTE = [
-  '#5865F2', '#57F287', '#FEE75C', '#EB459E',
-  '#ED4245', '#9B59B6', '#1ABC9C', '#E67E22',
+  '#5865F2',
+  '#57F287',
+  '#FEE75C',
+  '#EB459E',
+  '#ED4245',
+  '#9B59B6',
+  '#1ABC9C',
+  '#E67E22',
 ];
 
 function hashColor(hex: string): string {
@@ -559,7 +565,9 @@ function hashColor(hex: string): string {
 }
 
 function normalizeChannelName(raw: string): string {
-  return raw.trim().toLowerCase()
+  return raw
+    .trim()
+    .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
@@ -571,7 +579,7 @@ function generateInviteCode(micros: bigint, serverId: bigint, senderHex: string)
   const input = `${micros}:${serverId}:${senderHex}`;
   let h = 5381n;
   for (let i = 0; i < input.length; i++) {
-    h = ((h << 5n) + h + BigInt(input.charCodeAt(i))) & 0xFFFFFFFFn;
+    h = ((h << 5n) + h + BigInt(input.charCodeAt(i))) & 0xffffffffn;
   }
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   let code = '';
@@ -588,7 +596,11 @@ function generateInviteCode(micros: bigint, serverId: bigint, senderHex: string)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getMember(ctx: any, serverId: bigint): any {
   for (const m of ctx.db.server_member.byServerId.filter(serverId)) {
-    if ((m.userIdentity as { toHexString(): string }).toHexString() === (ctx.sender as { toHexString(): string }).toHexString()) return m;
+    if (
+      (m.userIdentity as { toHexString(): string }).toHexString() ===
+      (ctx.sender as { toHexString(): string }).toHexString()
+    )
+      return m;
   }
   return undefined;
 }
@@ -633,24 +645,21 @@ function hasSpecialRole(ctx: any, serverId: bigint, identity: { toHexString(): s
 // PERMISSION SYSTEM (Discord-style bitfield)
 // ============================================================================
 
-const PERM_VIEW_CHANNELS   = 1n;
-const PERM_SEND_MESSAGES   = 2n;
+const PERM_VIEW_CHANNELS = 1n;
+const PERM_SEND_MESSAGES = 2n;
 const PERM_MANAGE_MESSAGES = 4n;
 const PERM_MANAGE_CHANNELS = 8n;
-const PERM_KICK_MEMBERS    = 16n;
-const PERM_BAN_MEMBERS     = 32n;
-const PERM_MANAGE_ROLES    = 64n;
-const PERM_MANAGE_SERVER   = 128n;
-const PERM_CREATE_INVITE   = 256n;
-const PERM_ADD_REACTIONS   = 512n;
-const PERM_ADMINISTRATOR   = 1024n; // bypass all permission checks
+const PERM_KICK_MEMBERS = 16n;
+const PERM_BAN_MEMBERS = 32n;
+const PERM_MANAGE_ROLES = 64n;
+const PERM_MANAGE_SERVER = 128n;
+const PERM_CREATE_INVITE = 256n;
+const PERM_ADD_REACTIONS = 512n;
+const PERM_ADMINISTRATOR = 1024n; // bypass all permission checks
 
 // Default @everyone permissions for a brand new server: basic interaction
 const DEFAULT_EVERYONE_PERMS =
-  PERM_VIEW_CHANNELS |
-  PERM_SEND_MESSAGES |
-  PERM_ADD_REACTIONS |
-  PERM_CREATE_INVITE;
+  PERM_VIEW_CHANNELS | PERM_SEND_MESSAGES | PERM_ADD_REACTIONS | PERM_CREATE_INVITE;
 
 // @everyone permissions on the locked default community server: read-only
 const LOCKED_EVERYONE_PERMS = PERM_VIEW_CHANNELS | PERM_ADD_REACTIONS;
@@ -712,29 +721,23 @@ function ensureDefaultRole(ctx: any, serverId: bigint, lockedDefault: boolean): 
 // USER REDUCERS
 // ============================================================================
 
-export const set_name = spacetimedb.reducer(
-  { name: t.string() },
-  (ctx, { name }) => {
-    const trimmed = name.trim();
-    if (!trimmed) throw new SenderError('Name must not be empty');
-    if (trimmed.length > 32) throw new SenderError('Name must be 32 chars or fewer');
-    const u = ctx.db.user.identity.find(ctx.sender);
-    if (!u) throw new SenderError('Unknown user');
-    ctx.db.user.identity.update({ ...u, name: trimmed });
-  }
-);
+export const set_name = spacetimedb.reducer({ name: t.string() }, (ctx, { name }) => {
+  const trimmed = name.trim();
+  if (!trimmed) throw new SenderError('Name must not be empty');
+  if (trimmed.length > 32) throw new SenderError('Name must be 32 chars or fewer');
+  const u = ctx.db.user.identity.find(ctx.sender);
+  if (!u) throw new SenderError('Unknown user');
+  ctx.db.user.identity.update({ ...u, name: trimmed });
+});
 
-export const set_status = spacetimedb.reducer(
-  { status: t.string() },
-  (ctx, { status }) => {
-    if (!['online', 'idle', 'dnd', 'invisible'].includes(status)) {
-      throw new SenderError('Invalid status');
-    }
-    const u = ctx.db.user.identity.find(ctx.sender);
-    if (!u) throw new SenderError('Unknown user');
-    ctx.db.user.identity.update({ ...u, status });
+export const set_status = spacetimedb.reducer({ status: t.string() }, (ctx, { status }) => {
+  if (!['online', 'idle', 'dnd', 'invisible'].includes(status)) {
+    throw new SenderError('Invalid status');
   }
-);
+  const u = ctx.db.user.identity.find(ctx.sender);
+  if (!u) throw new SenderError('Unknown user');
+  ctx.db.user.identity.update({ ...u, status });
+});
 
 export const set_profile = spacetimedb.reducer(
   { bio: t.string(), pronouns: t.string() },
@@ -809,26 +812,23 @@ export const create_server = spacetimedb.reducer(
   }
 );
 
-export const leave_server = spacetimedb.reducer(
-  { serverId: t.u64() },
-  (ctx, { serverId }) => {
-    if (isDefaultServer(serverId)) {
-      throw new SenderError('This is the default community server and cannot be left.');
-    }
-    const svr = ctx.db.server.id.find(serverId);
-    if (!svr) throw new SenderError('Server not found');
-    if (svr.ownerId.toHexString() === ctx.sender.toHexString()) {
-      throw new SenderError('Server owner cannot leave — delete the server or transfer ownership');
-    }
-    for (const m of ctx.db.server_member.byServerId.filter(serverId)) {
-      if (m.userIdentity.toHexString() === ctx.sender.toHexString()) {
-        ctx.db.server_member.id.delete(m.id);
-        return;
-      }
-    }
-    throw new SenderError('Not a member of this server');
+export const leave_server = spacetimedb.reducer({ serverId: t.u64() }, (ctx, { serverId }) => {
+  if (isDefaultServer(serverId)) {
+    throw new SenderError('This is the default community server and cannot be left.');
   }
-);
+  const svr = ctx.db.server.id.find(serverId);
+  if (!svr) throw new SenderError('Server not found');
+  if (svr.ownerId.toHexString() === ctx.sender.toHexString()) {
+    throw new SenderError('Server owner cannot leave — delete the server or transfer ownership');
+  }
+  for (const m of ctx.db.server_member.byServerId.filter(serverId)) {
+    if (m.userIdentity.toHexString() === ctx.sender.toHexString()) {
+      ctx.db.server_member.id.delete(m.id);
+      return;
+    }
+  }
+  throw new SenderError('Not a member of this server');
+});
 
 export const update_server = spacetimedb.reducer(
   {
@@ -872,47 +872,44 @@ export const update_server = spacetimedb.reducer(
   }
 );
 
-export const delete_server = spacetimedb.reducer(
-  { serverId: t.u64() },
-  (ctx, { serverId }) => {
-    if (isDefaultServer(serverId)) {
-      throw new SenderError('This is the default community server and cannot be deleted.');
-    }
-    const svr = ctx.db.server.id.find(serverId);
-    if (!svr) throw new SenderError('Server not found');
-    if (svr.ownerId.toHexString() !== ctx.sender.toHexString()) {
-      throw new SenderError('Only the owner can delete the server');
-    }
-    // Cascade: per-channel messages, reactions, threads, then the channel
-    for (const c of ctx.db.channel.byServerId.filter(serverId)) {
-      for (const m of ctx.db.message.byChannelId.filter(c.id)) {
-        for (const r of ctx.db.reaction.byMessageId.filter(m.id)) {
-          ctx.db.reaction.id.delete(r.id);
-        }
-        ctx.db.message.id.delete(m.id);
-      }
-      for (const th of ctx.db.thread.byChannelId.filter(c.id)) {
-        ctx.db.thread.id.delete(th.id);
-      }
-      ctx.db.channel.id.delete(c.id);
-    }
-    // Categories
-    for (const cat of ctx.db.category.byServerId.filter(serverId)) {
-      ctx.db.category.id.delete(cat.id);
-    }
-    // Members
-    for (const mem of ctx.db.server_member.byServerId.filter(serverId)) {
-      ctx.db.server_member.id.delete(mem.id);
-    }
-    // Invites (no server-id index; scan)
-    for (const inv of ctx.db.invite.iter()) {
-      if (inv.serverId === serverId) {
-        ctx.db.invite.id.delete(inv.id);
-      }
-    }
-    ctx.db.server.id.delete(serverId);
+export const delete_server = spacetimedb.reducer({ serverId: t.u64() }, (ctx, { serverId }) => {
+  if (isDefaultServer(serverId)) {
+    throw new SenderError('This is the default community server and cannot be deleted.');
   }
-);
+  const svr = ctx.db.server.id.find(serverId);
+  if (!svr) throw new SenderError('Server not found');
+  if (svr.ownerId.toHexString() !== ctx.sender.toHexString()) {
+    throw new SenderError('Only the owner can delete the server');
+  }
+  // Cascade: per-channel messages, reactions, threads, then the channel
+  for (const c of ctx.db.channel.byServerId.filter(serverId)) {
+    for (const m of ctx.db.message.byChannelId.filter(c.id)) {
+      for (const r of ctx.db.reaction.byMessageId.filter(m.id)) {
+        ctx.db.reaction.id.delete(r.id);
+      }
+      ctx.db.message.id.delete(m.id);
+    }
+    for (const th of ctx.db.thread.byChannelId.filter(c.id)) {
+      ctx.db.thread.id.delete(th.id);
+    }
+    ctx.db.channel.id.delete(c.id);
+  }
+  // Categories
+  for (const cat of ctx.db.category.byServerId.filter(serverId)) {
+    ctx.db.category.id.delete(cat.id);
+  }
+  // Members
+  for (const mem of ctx.db.server_member.byServerId.filter(serverId)) {
+    ctx.db.server_member.id.delete(mem.id);
+  }
+  // Invites (no server-id index; scan)
+  for (const inv of ctx.db.invite.iter()) {
+    if (inv.serverId === serverId) {
+      ctx.db.invite.id.delete(inv.id);
+    }
+  }
+  ctx.db.server.id.delete(serverId);
+});
 
 export const kick_member = spacetimedb.reducer(
   { serverId: t.u64(), userIdentity: t.identity() },
@@ -963,18 +960,15 @@ export const set_member_role = spacetimedb.reducer(
   }
 );
 
-export const delete_invite = spacetimedb.reducer(
-  { inviteId: t.u64() },
-  (ctx, { inviteId }) => {
-    const inv = ctx.db.invite.id.find(inviteId);
-    if (!inv) throw new SenderError('Invite not found');
-    const member = requireMember(ctx, inv.serverId);
-    if (!isPrivileged(member.role)) {
-      throw new SenderError('Only admins and the owner may revoke invites');
-    }
-    ctx.db.invite.id.delete(inviteId);
+export const delete_invite = spacetimedb.reducer({ inviteId: t.u64() }, (ctx, { inviteId }) => {
+  const inv = ctx.db.invite.id.find(inviteId);
+  if (!inv) throw new SenderError('Invite not found');
+  const member = requireMember(ctx, inv.serverId);
+  if (!isPrivileged(member.role)) {
+    throw new SenderError('Only admins and the owner may revoke invites');
   }
-);
+  ctx.db.invite.id.delete(inviteId);
+});
 
 // ============================================================================
 // SUPER ADMIN / SPECIAL ROLE REDUCERS
@@ -1119,22 +1113,19 @@ export const update_role = spacetimedb.reducer(
   }
 );
 
-export const delete_role = spacetimedb.reducer(
-  { roleId: t.u64() },
-  (ctx, { roleId }) => {
-    const role = ctx.db.server_role.id.find(roleId);
-    if (!role) throw new SenderError('Role not found');
-    if (role.isDefault) {
-      throw new SenderError('Cannot delete the @everyone role');
-    }
-    requireRolePermission(ctx, role.serverId);
-    // Remove all member_role rows that reference this role
-    for (const mr of ctx.db.member_role.byRoleId.filter(roleId)) {
-      ctx.db.member_role.id.delete(mr.id);
-    }
-    ctx.db.server_role.id.delete(roleId);
+export const delete_role = spacetimedb.reducer({ roleId: t.u64() }, (ctx, { roleId }) => {
+  const role = ctx.db.server_role.id.find(roleId);
+  if (!role) throw new SenderError('Role not found');
+  if (role.isDefault) {
+    throw new SenderError('Cannot delete the @everyone role');
   }
-);
+  requireRolePermission(ctx, role.serverId);
+  // Remove all member_role rows that reference this role
+  for (const mr of ctx.db.member_role.byRoleId.filter(roleId)) {
+    ctx.db.member_role.id.delete(mr.id);
+  }
+  ctx.db.server_role.id.delete(roleId);
+});
 
 export const assign_role = spacetimedb.reducer(
   { roleId: t.u64(), userIdentity: t.identity() },
@@ -1144,10 +1135,7 @@ export const assign_role = spacetimedb.reducer(
     requireRolePermission(ctx, role.serverId);
     // Idempotent
     for (const mr of ctx.db.member_role.byServerId.filter(role.serverId)) {
-      if (
-        mr.roleId === roleId &&
-        mr.userIdentity.toHexString() === userIdentity.toHexString()
-      ) {
+      if (mr.roleId === roleId && mr.userIdentity.toHexString() === userIdentity.toHexString()) {
         return;
       }
     }
@@ -1171,10 +1159,7 @@ export const unassign_role = spacetimedb.reducer(
     }
     requireRolePermission(ctx, role.serverId);
     for (const mr of ctx.db.member_role.byServerId.filter(role.serverId)) {
-      if (
-        mr.roleId === roleId &&
-        mr.userIdentity.toHexString() === userIdentity.toHexString()
-      ) {
+      if (mr.roleId === roleId && mr.userIdentity.toHexString() === userIdentity.toHexString()) {
         ctx.db.member_role.id.delete(mr.id);
         return;
       }
@@ -1240,11 +1225,7 @@ export const join_server = spacetimedb.reducer(
       joinedAt: ctx.timestamp,
     });
     // Ensure @everyone exists, then assign it to the new member
-    const roleId = ensureDefaultRole(
-      ctx,
-      inv.serverId,
-      isDefaultServer(inv.serverId)
-    );
+    const roleId = ensureDefaultRole(ctx, inv.serverId, isDefaultServer(inv.serverId));
     ctx.db.member_role.insert({
       id: 0n,
       serverId: inv.serverId,
@@ -1285,24 +1266,21 @@ export const create_channel = spacetimedb.reducer(
   }
 );
 
-export const delete_channel = spacetimedb.reducer(
-  { channelId: t.u64() },
-  (ctx, { channelId }) => {
-    const chn = ctx.db.channel.id.find(channelId);
-    if (!chn) throw new SenderError('Channel not found');
-    const member = requireMember(ctx, chn.serverId);
-    if (!isPrivileged(member.role)) {
-      throw new SenderError('Only admins and the owner may delete channels');
-    }
-    for (const m of ctx.db.message.byChannelId.filter(channelId)) {
-      ctx.db.message.id.delete(m.id);
-    }
-    for (const th of ctx.db.thread.byChannelId.filter(channelId)) {
-      ctx.db.thread.id.delete(th.id);
-    }
-    ctx.db.channel.id.delete(channelId);
+export const delete_channel = spacetimedb.reducer({ channelId: t.u64() }, (ctx, { channelId }) => {
+  const chn = ctx.db.channel.id.find(channelId);
+  if (!chn) throw new SenderError('Channel not found');
+  const member = requireMember(ctx, chn.serverId);
+  if (!isPrivileged(member.role)) {
+    throw new SenderError('Only admins and the owner may delete channels');
   }
-);
+  for (const m of ctx.db.message.byChannelId.filter(channelId)) {
+    ctx.db.message.id.delete(m.id);
+  }
+  for (const th of ctx.db.thread.byChannelId.filter(channelId)) {
+    ctx.db.thread.id.delete(th.id);
+  }
+  ctx.db.channel.id.delete(channelId);
+});
 
 // ============================================================================
 // MESSAGE REDUCERS
@@ -1331,16 +1309,15 @@ export const send_message = spacetimedb.reducer(
     if (!isSuperAdmin(ctx, ctx.sender) && senderMember.role !== 'owner') {
       const perms = getMemberPermissions(ctx, chn.serverId, ctx.sender);
       if (!hasPerm(perms, PERM_SEND_MESSAGES)) {
-        throw new SenderError(
-          "You don't have permission to send messages in this channel"
-        );
+        throw new SenderError("You don't have permission to send messages in this channel");
       }
     }
 
     if (threadId !== 0n) {
       const th = ctx.db.thread.id.find(threadId);
       if (!th) throw new SenderError('Thread not found');
-      if (th.channelId !== channelId) throw new SenderError('Thread does not belong to this channel');
+      if (th.channelId !== channelId)
+        throw new SenderError('Thread does not belong to this channel');
     }
     if (replyToId !== 0n) {
       const parent = ctx.db.message.id.find(replyToId);
@@ -1356,11 +1333,8 @@ export const send_message = spacetimedb.reducer(
           ctx.timestamp.microsSinceUnixEpoch - rl.lastMessageAt.microsSinceUnixEpoch;
         const requiredMicros = BigInt(chn.slowmodeSeconds) * 1_000_000n;
         if (elapsedMicros < requiredMicros) {
-          const remaining =
-            Number((requiredMicros - elapsedMicros) / 1_000_000n) + 1;
-          throw new SenderError(
-            `Slowmode active — wait ${remaining}s before posting again`
-          );
+          const remaining = Number((requiredMicros - elapsedMicros) / 1_000_000n) + 1;
+          throw new SenderError(`Slowmode active — wait ${remaining}s before posting again`);
         }
       }
     }
@@ -1419,21 +1393,18 @@ export const edit_message = spacetimedb.reducer(
   }
 );
 
-export const delete_message = spacetimedb.reducer(
-  { messageId: t.u64() },
-  (ctx, { messageId }) => {
-    const msg = ctx.db.message.id.find(messageId);
-    if (!msg) throw new SenderError('Message not found');
-    const chn = ctx.db.channel.id.find(msg.channelId);
-    let canDelete = msg.authorId.toHexString() === ctx.sender.toHexString();
-    if (!canDelete && chn) {
-      const member = getMember(ctx, chn.serverId);
-      canDelete = member !== undefined && isPrivileged(member.role);
-    }
-    if (!canDelete) throw new SenderError("Cannot delete this message");
-    ctx.db.message.id.delete(messageId);
+export const delete_message = spacetimedb.reducer({ messageId: t.u64() }, (ctx, { messageId }) => {
+  const msg = ctx.db.message.id.find(messageId);
+  if (!msg) throw new SenderError('Message not found');
+  const chn = ctx.db.channel.id.find(msg.channelId);
+  let canDelete = msg.authorId.toHexString() === ctx.sender.toHexString();
+  if (!canDelete && chn) {
+    const member = getMember(ctx, chn.serverId);
+    canDelete = member !== undefined && isPrivileged(member.role);
   }
-);
+  if (!canDelete) throw new SenderError('Cannot delete this message');
+  ctx.db.message.id.delete(messageId);
+});
 
 // ============================================================================
 // THREAD REDUCERS
@@ -1491,20 +1462,17 @@ export const toggle_reaction = spacetimedb.reducer(
 // TYPING REDUCER
 // ============================================================================
 
-export const set_typing = spacetimedb.reducer(
-  { channelId: t.u64() },
-  (ctx, { channelId }) => {
-    const chn = ctx.db.channel.id.find(channelId);
-    if (!chn) throw new SenderError('Channel not found');
-    requireMember(ctx, chn.serverId);
-    const existing = ctx.db.typing.userIdentity.find(ctx.sender);
-    if (existing) {
-      ctx.db.typing.userIdentity.update({ ...existing, channelId, startedAt: ctx.timestamp });
-    } else {
-      ctx.db.typing.insert({ userIdentity: ctx.sender, channelId, startedAt: ctx.timestamp });
-    }
+export const set_typing = spacetimedb.reducer({ channelId: t.u64() }, (ctx, { channelId }) => {
+  const chn = ctx.db.channel.id.find(channelId);
+  if (!chn) throw new SenderError('Channel not found');
+  requireMember(ctx, chn.serverId);
+  const existing = ctx.db.typing.userIdentity.find(ctx.sender);
+  if (existing) {
+    ctx.db.typing.userIdentity.update({ ...existing, channelId, startedAt: ctx.timestamp });
+  } else {
+    ctx.db.typing.insert({ userIdentity: ctx.sender, channelId, startedAt: ctx.timestamp });
   }
-);
+});
 
 // ============================================================================
 // READ STATE REDUCER
@@ -1659,32 +1627,26 @@ export const set_nickname = spacetimedb.reducer(
 // PIN REDUCERS
 // ============================================================================
 
-export const pin_message = spacetimedb.reducer(
-  { messageId: t.u64() },
-  (ctx, { messageId }) => {
-    const msg = ctx.db.message.id.find(messageId);
-    if (!msg) throw new SenderError('Message not found');
-    if (msg.threadId !== 0n) throw new SenderError('Cannot pin thread replies');
-    const chn = ctx.db.channel.id.find(msg.channelId);
-    if (!chn) throw new SenderError('Channel not found');
-    requireMember(ctx, chn.serverId);
-    if (msg.pinned) return;
-    ctx.db.message.id.update({ ...msg, pinned: true });
-  }
-);
+export const pin_message = spacetimedb.reducer({ messageId: t.u64() }, (ctx, { messageId }) => {
+  const msg = ctx.db.message.id.find(messageId);
+  if (!msg) throw new SenderError('Message not found');
+  if (msg.threadId !== 0n) throw new SenderError('Cannot pin thread replies');
+  const chn = ctx.db.channel.id.find(msg.channelId);
+  if (!chn) throw new SenderError('Channel not found');
+  requireMember(ctx, chn.serverId);
+  if (msg.pinned) return;
+  ctx.db.message.id.update({ ...msg, pinned: true });
+});
 
-export const unpin_message = spacetimedb.reducer(
-  { messageId: t.u64() },
-  (ctx, { messageId }) => {
-    const msg = ctx.db.message.id.find(messageId);
-    if (!msg) throw new SenderError('Message not found');
-    const chn = ctx.db.channel.id.find(msg.channelId);
-    if (!chn) throw new SenderError('Channel not found');
-    requireMember(ctx, chn.serverId);
-    if (!msg.pinned) return;
-    ctx.db.message.id.update({ ...msg, pinned: false });
-  }
-);
+export const unpin_message = spacetimedb.reducer({ messageId: t.u64() }, (ctx, { messageId }) => {
+  const msg = ctx.db.message.id.find(messageId);
+  if (!msg) throw new SenderError('Message not found');
+  const chn = ctx.db.channel.id.find(msg.channelId);
+  if (!chn) throw new SenderError('Channel not found');
+  requireMember(ctx, chn.serverId);
+  if (!msg.pinned) return;
+  ctx.db.message.id.update({ ...msg, pinned: false });
+});
 
 // ============================================================================
 // SLOWMODE REDUCER
@@ -1721,8 +1683,11 @@ export const send_server_invite = spacetimedb.reducer(
     if (!svr) throw new SenderError('Server not found');
     // Silently no-op if the target is already a member
     for (const m of ctx.db.server_member.byServerId.filter(inv.serverId)) {
-      if ((m.userIdentity as { toHexString(): string }).toHexString() ===
-          (targetIdentity as { toHexString(): string }).toHexString()) return;
+      if (
+        (m.userIdentity as { toHexString(): string }).toHexString() ===
+        (targetIdentity as { toHexString(): string }).toHexString()
+      )
+        return;
     }
     const sender = ctx.db.user.identity.find(ctx.sender);
     const senderName = (sender?.name as string | undefined) ?? 'Someone';
@@ -1744,8 +1709,10 @@ export const dismiss_notification = spacetimedb.reducer(
   (ctx, { notificationId }) => {
     const notif = ctx.db.notification.id.find(notificationId);
     if (!notif) return;
-    if ((notif.recipientIdentity as { toHexString(): string }).toHexString() !==
-        ctx.sender.toHexString()) {
+    if (
+      (notif.recipientIdentity as { toHexString(): string }).toHexString() !==
+      ctx.sender.toHexString()
+    ) {
       throw new SenderError('Not your notification');
     }
     ctx.db.notification.id.delete(notificationId);
@@ -1759,26 +1726,23 @@ export const dismiss_notification = spacetimedb.reducer(
 // Idempotent — creates a default ai_config row for a server if one doesn't
 // exist yet. Callable by anyone in the server; the bot uses this on startup
 // to make sure every server has a config row to read.
-export const ensure_ai_config = spacetimedb.reducer(
-  { serverId: t.u64() },
-  (ctx, { serverId }) => {
-    const existing = ctx.db.ai_config.serverId.find(serverId);
-    if (existing) return;
-    const srv = ctx.db.server.id.find(serverId);
-    if (!srv) throw new SenderError('Server not found');
-    ctx.db.ai_config.insert({
-      serverId,
-      enabled: false,
-      askEnabled: false,
-      summarizeEnabled: false,
-      monthlyTokenBudget: 0n,
-      tokensUsedThisMonth: 0n,
-      sourceChannelIds: '',
-      createdAt: ctx.timestamp,
-      updatedAt: ctx.timestamp,
-    });
-  }
-);
+export const ensure_ai_config = spacetimedb.reducer({ serverId: t.u64() }, (ctx, { serverId }) => {
+  const existing = ctx.db.ai_config.serverId.find(serverId);
+  if (existing) return;
+  const srv = ctx.db.server.id.find(serverId);
+  if (!srv) throw new SenderError('Server not found');
+  ctx.db.ai_config.insert({
+    serverId,
+    enabled: false,
+    askEnabled: false,
+    summarizeEnabled: false,
+    monthlyTokenBudget: 0n,
+    tokensUsedThisMonth: 0n,
+    sourceChannelIds: '',
+    createdAt: ctx.timestamp,
+    updatedAt: ctx.timestamp,
+  });
+});
 
 // Admin-only — update AI feature flags and token budget for a server.
 // Server owners, Administrators (bitflag), and Super Admins may call this.
@@ -1791,12 +1755,15 @@ export const update_ai_config = spacetimedb.reducer(
     monthlyTokenBudget: t.u64(),
     sourceChannelIds: t.string(),
   },
-  (ctx, { serverId, enabled, askEnabled, summarizeEnabled, monthlyTokenBudget, sourceChannelIds }) => {
+  (
+    ctx,
+    { serverId, enabled, askEnabled, summarizeEnabled, monthlyTokenBudget, sourceChannelIds }
+  ) => {
     const srv = ctx.db.server.id.find(serverId);
     if (!srv) throw new SenderError('Server not found');
 
-    const isOwner = (srv.ownerId as { toHexString(): string }).toHexString() ===
-      ctx.sender.toHexString();
+    const isOwner =
+      (srv.ownerId as { toHexString(): string }).toHexString() === ctx.sender.toHexString();
     const perms = getMemberPermissions(ctx, serverId, ctx.sender);
     if (!isOwner && !hasPerm(perms, PERM_MANAGE_SERVER) && !isSuperAdmin(ctx, ctx.sender)) {
       throw new SenderError('Only server admins may update AI config');
@@ -1985,7 +1952,7 @@ export const fail_ask_request = spacetimedb.reducer(
 //
 
 const MIN_DEV_SECRET_LEN = 16;
-const FAIL_WINDOW_MICROS = 60_000_000n;    // 60 s
+const FAIL_WINDOW_MICROS = 60_000_000n; // 60 s
 const FAIL_MAX_ATTEMPTS = 5;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1994,7 +1961,7 @@ function writeDevAuditRow(
   userIdentity: unknown,
   action: string,
   success: boolean,
-  detail: string,
+  detail: string
 ): void {
   ctx.db.dev_admin_audit.insert({
     id: 0n,
@@ -2085,42 +2052,39 @@ function senderIsSuperAdmin(ctx: any): boolean {
   return false;
 }
 
-export const claim_super_admin = spacetimedb.reducer(
-  { secret: t.string() },
-  (ctx, { secret }) => {
-    const senderHex = ctx.sender.toHexString();
+export const claim_super_admin = spacetimedb.reducer({ secret: t.string() }, (ctx, { secret }) => {
+  const senderHex = ctx.sender.toHexString();
 
-    // Rate-limit check — count failures in the last 60 s window.
-    if (countRecentFailures(ctx, senderHex) >= FAIL_MAX_ATTEMPTS) {
-      writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'rate limited');
-      throw new SenderError('Too many failed attempts — wait a minute and try again');
-    }
-
-    const row = ctx.db.dev_admin_secret.id.find(1n);
-    if (!row) {
-      writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'not seeded');
-      throw new SenderError('Dev admin secret has not been seeded yet');
-    }
-    if (secret !== row.secret) {
-      writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'wrong secret');
-      throw new SenderError('Invalid secret');
-    }
-
-    // Idempotent — already super admin? do nothing (but still audit).
-    if (senderIsSuperAdmin(ctx)) {
-      writeDevAuditRow(ctx, ctx.sender, 'claim', true, 'already super');
-      return;
-    }
-
-    ctx.db.super_admin.insert({
-      userIdentity: ctx.sender,
-      grantedAt: ctx.timestamp,
-    });
-    writeDevAuditRow(ctx, ctx.sender, 'claim', true, 'granted');
+  // Rate-limit check — count failures in the last 60 s window.
+  if (countRecentFailures(ctx, senderHex) >= FAIL_MAX_ATTEMPTS) {
+    writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'rate limited');
+    throw new SenderError('Too many failed attempts — wait a minute and try again');
   }
-);
 
-export const revoke_super_admin_self = spacetimedb.reducer((ctx) => {
+  const row = ctx.db.dev_admin_secret.id.find(1n);
+  if (!row) {
+    writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'not seeded');
+    throw new SenderError('Dev admin secret has not been seeded yet');
+  }
+  if (secret !== row.secret) {
+    writeDevAuditRow(ctx, ctx.sender, 'claim_failed', false, 'wrong secret');
+    throw new SenderError('Invalid secret');
+  }
+
+  // Idempotent — already super admin? do nothing (but still audit).
+  if (senderIsSuperAdmin(ctx)) {
+    writeDevAuditRow(ctx, ctx.sender, 'claim', true, 'already super');
+    return;
+  }
+
+  ctx.db.super_admin.insert({
+    userIdentity: ctx.sender,
+    grantedAt: ctx.timestamp,
+  });
+  writeDevAuditRow(ctx, ctx.sender, 'claim', true, 'granted');
+});
+
+export const revoke_super_admin_self = spacetimedb.reducer(ctx => {
   // Look up by iterating + hex-comparing rather than calling
   // .userIdentity.find(ctx.sender) directly — the .find accessor is
   // flaky with the Identity wrapper coming from ctx.sender in this
@@ -2165,49 +2129,60 @@ export const reseed_default_server = spacetimedb.reducer(ctx => {
   // Re-seed documentation-hub structure
   const structure = [
     {
-      name: 'INFORMATION', pos: 0,
+      name: 'INFORMATION',
+      pos: 0,
       channels: [
-        { name: 'welcome',       topic: 'Welcome to Omnia — read this first.' },
+        { name: 'welcome', topic: 'Welcome to Omnia — read this first.' },
         { name: 'announcements', topic: 'Official updates from the team.' },
-        { name: 'changelog',     topic: 'Release notes and version history.' },
+        { name: 'changelog', topic: 'Release notes and version history.' },
       ],
     },
     {
-      name: 'GETTING STARTED', pos: 1,
+      name: 'GETTING STARTED',
+      pos: 1,
       channels: [
-        { name: 'quick-start',   topic: 'New here? This guide gets you up and running fast.' },
-        { name: 'installation',  topic: 'Installation and setup for all platforms.' },
-        { name: 'faq',           topic: 'Answers to the most common questions.' },
+        { name: 'quick-start', topic: 'New here? This guide gets you up and running fast.' },
+        { name: 'installation', topic: 'Installation and setup for all platforms.' },
+        { name: 'faq', topic: 'Answers to the most common questions.' },
       ],
     },
     {
-      name: 'DOCUMENTATION', pos: 2,
+      name: 'DOCUMENTATION',
+      pos: 2,
       channels: [
-        { name: 'guides',        topic: 'In-depth how-to guides and walkthroughs.' },
+        { name: 'guides', topic: 'In-depth how-to guides and walkthroughs.' },
         { name: 'api-reference', topic: 'Complete API reference.' },
-        { name: 'examples',      topic: 'Sample code and example projects.' },
+        { name: 'examples', topic: 'Sample code and example projects.' },
       ],
     },
     {
-      name: 'COMMUNITY', pos: 3,
+      name: 'COMMUNITY',
+      pos: 3,
       channels: [
-        { name: 'general',       topic: 'Open discussion for everyone.' },
-        { name: 'help',          topic: 'Ask questions and get support.' },
-        { name: 'feedback',      topic: 'Share ideas and feature requests.' },
-        { name: 'showcase',      topic: "Show off what you've built." },
+        { name: 'general', topic: 'Open discussion for everyone.' },
+        { name: 'help', topic: 'Ask questions and get support.' },
+        { name: 'feedback', topic: 'Share ideas and feature requests.' },
+        { name: 'showcase', topic: "Show off what you've built." },
       ],
     },
   ];
   for (const cat of structure) {
     const catRow = ctx.db.category.insert({
-      id: 0n, serverId, name: cat.name, position: cat.pos,
+      id: 0n,
+      serverId,
+      name: cat.name,
+      position: cat.pos,
     });
     cat.channels.forEach((c, i) => {
       ctx.db.channel.insert({
-        id: 0n, serverId,
-        name: c.name, topic: c.topic,
-        position: i, categoryId: catRow.id,
-        slowmodeSeconds: 0, lastMessageId: 0n,
+        id: 0n,
+        serverId,
+        name: c.name,
+        topic: c.topic,
+        position: i,
+        categoryId: catRow.id,
+        slowmodeSeconds: 0,
+        lastMessageId: 0n,
         createdAt: ctx.timestamp,
       });
     });
@@ -2241,49 +2216,60 @@ export const init = spacetimedb.init(ctx => {
   // Seed documentation-hub channel structure
   const initStructure = [
     {
-      name: 'INFORMATION', pos: 0,
+      name: 'INFORMATION',
+      pos: 0,
       channels: [
-        { name: 'welcome',       topic: 'Welcome to Omnia — read this first.' },
+        { name: 'welcome', topic: 'Welcome to Omnia — read this first.' },
         { name: 'announcements', topic: 'Official updates from the team.' },
-        { name: 'changelog',     topic: 'Release notes and version history.' },
+        { name: 'changelog', topic: 'Release notes and version history.' },
       ],
     },
     {
-      name: 'GETTING STARTED', pos: 1,
+      name: 'GETTING STARTED',
+      pos: 1,
       channels: [
-        { name: 'quick-start',   topic: 'New here? This guide gets you up and running fast.' },
-        { name: 'installation',  topic: 'Installation and setup for all platforms.' },
-        { name: 'faq',           topic: 'Answers to the most common questions.' },
+        { name: 'quick-start', topic: 'New here? This guide gets you up and running fast.' },
+        { name: 'installation', topic: 'Installation and setup for all platforms.' },
+        { name: 'faq', topic: 'Answers to the most common questions.' },
       ],
     },
     {
-      name: 'DOCUMENTATION', pos: 2,
+      name: 'DOCUMENTATION',
+      pos: 2,
       channels: [
-        { name: 'guides',        topic: 'In-depth how-to guides and walkthroughs.' },
+        { name: 'guides', topic: 'In-depth how-to guides and walkthroughs.' },
         { name: 'api-reference', topic: 'Complete API reference.' },
-        { name: 'examples',      topic: 'Sample code and example projects.' },
+        { name: 'examples', topic: 'Sample code and example projects.' },
       ],
     },
     {
-      name: 'COMMUNITY', pos: 3,
+      name: 'COMMUNITY',
+      pos: 3,
       channels: [
-        { name: 'general',       topic: 'Open discussion for everyone.' },
-        { name: 'help',          topic: 'Ask questions and get support.' },
-        { name: 'feedback',      topic: 'Share ideas and feature requests.' },
-        { name: 'showcase',      topic: "Show off what you've built." },
+        { name: 'general', topic: 'Open discussion for everyone.' },
+        { name: 'help', topic: 'Ask questions and get support.' },
+        { name: 'feedback', topic: 'Share ideas and feature requests.' },
+        { name: 'showcase', topic: "Show off what you've built." },
       ],
     },
   ];
   for (const cat of initStructure) {
     const catRow = ctx.db.category.insert({
-      id: 0n, serverId: svr.id, name: cat.name, position: cat.pos,
+      id: 0n,
+      serverId: svr.id,
+      name: cat.name,
+      position: cat.pos,
     });
     cat.channels.forEach((c, i) => {
       ctx.db.channel.insert({
-        id: 0n, serverId: svr.id,
-        name: c.name, topic: c.topic,
-        position: i, categoryId: catRow.id,
-        slowmodeSeconds: 0, lastMessageId: 0n,
+        id: 0n,
+        serverId: svr.id,
+        name: c.name,
+        topic: c.topic,
+        position: i,
+        categoryId: catRow.id,
+        slowmodeSeconds: 0,
+        lastMessageId: 0n,
         createdAt: ctx.timestamp,
       });
     });
@@ -2379,10 +2365,7 @@ export const onConnect = spacetimedb.clientConnected(ctx => {
         color: '#5865f2',
         position: 10,
         permissions:
-          PERM_VIEW_CHANNELS |
-          PERM_SEND_MESSAGES |
-          PERM_ADD_REACTIONS |
-          PERM_CREATE_INVITE,
+          PERM_VIEW_CHANNELS | PERM_SEND_MESSAGES | PERM_ADD_REACTIONS | PERM_CREATE_INVITE,
         isDefault: false,
       });
       speakerRoleId = row.id;

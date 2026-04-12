@@ -108,7 +108,7 @@ async function main(): Promise<void> {
     console.error(`[verify] ✗ question message ${newAsk.questionMessageId} not found`);
     process.exit(1);
   }
-  console.log(`[verify] question message:`);
+  console.log('[verify] question message:');
   console.log(`         id:        ${questionMsg.id}`);
   console.log(`         text:      "${questionMsg.text}"`);
   console.log(`         author:    ${questionMsg.authorId.toHexString().slice(0, 16)}…`);
@@ -149,11 +149,13 @@ async function main(): Promise<void> {
     }
     process.exit(1);
   }
-  console.log(`[verify] answer message:`);
+  console.log('[verify] answer message:');
   console.log(`         id:        ${answerMsg.id}`);
   console.log(`         replyToId: ${answerMsg.replyToId} (should be ${questionMsg.id})`);
   console.log(`         author:    ${answerMsg.authorId.toHexString().slice(0, 16)}…`);
-  console.log(`         text (first 200 chars): "${answerMsg.text.slice(0, 200).replace(/\n/g, ' ⏎ ')}…"`);
+  console.log(
+    `         text (first 200 chars): "${answerMsg.text.slice(0, 200).replace(/\n/g, ' ⏎ ')}…"`
+  );
 
   // ── Step 7: assert the reply chain ──────────────────────────────────
   if (answerMsg.replyToId !== questionMsg.id) {
@@ -179,7 +181,9 @@ async function main(): Promise<void> {
     await new Promise(res => setTimeout(res, 200));
   }
   if (!resolvedAsk || resolvedAsk.status !== 'answered') {
-    console.error(`[verify] ✗ ask_request status is ${resolvedAsk?.status ?? 'missing'}, expected 'answered'`);
+    console.error(
+      `[verify] ✗ ask_request status is ${resolvedAsk?.status ?? 'missing'}, expected 'answered'`
+    );
     process.exit(1);
   }
   console.log(`\n[verify] ✓ ask_request #${newAsk.id} status=answered`);
@@ -190,4 +194,7 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch(err => { console.error('[verify-reply fatal]', err); process.exit(1); });
+main().catch(err => {
+  console.error('[verify-reply fatal]', err);
+  process.exit(1);
+});

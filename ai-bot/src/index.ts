@@ -10,11 +10,11 @@
 //   7. Run forever — graceful shutdown on SIGINT / SIGTERM
 
 import { loadConfig } from './config.ts';
+import { enabledServerSummary, Ingester } from './ingestion.ts';
 import { makeLLM } from './llm.ts';
 import { QdrantStore } from './qdrant.ts';
-import { connectBot, subscribeAll } from './spacetime.ts';
-import { Ingester, enabledServerSummary } from './ingestion.ts';
 import { RAGHandler } from './rag.ts';
+import { connectBot, subscribeAll } from './spacetime.ts';
 
 async function main(): Promise<void> {
   console.log('──────────────────────────────────────');
@@ -43,7 +43,9 @@ async function main(): Promise<void> {
   const enabled = enabledServerSummary(conn);
   console.log(`[boot] AI is enabled on ${enabled.length} server(s)`);
   for (const c of enabled) {
-    console.log(`         - server #${c.serverId}  budget=${c.monthlyTokenBudget}  used=${c.tokensUsedThisMonth}`);
+    console.log(
+      `         - server #${c.serverId}  budget=${c.monthlyTokenBudget}  used=${c.tokensUsedThisMonth}`
+    );
   }
 
   // Ingestion: subscribe first so nothing posted during backfill is missed,
