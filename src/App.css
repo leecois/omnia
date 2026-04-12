@@ -1604,6 +1604,14 @@ a:hover {
   overflow-y: auto;
   z-index: 10;
 }
+.slash-popup-header {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
 .slash-popup-item {
   display: flex;
   align-items: center;

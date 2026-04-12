@@ -823,6 +823,17 @@ function ChannelPane({
           draft={draft}
           onChange={onDraftChange}
           onKeyDown={e => {
+            // Tab autocompletes the first matching slash command
+            if (e.key === 'Tab' && draft.startsWith('/') && draft.indexOf(' ') === -1) {
+              const partial = draft.slice(1).toLowerCase();
+              const match = SLASH_COMMANDS.find(c => c.name.startsWith(partial));
+              if (match) {
+                e.preventDefault();
+                setDraft(`/${match.name} `);
+                setSlashError(null);
+                return;
+              }
+            }
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               onSend(e as unknown as React.FormEvent);
@@ -894,13 +905,31 @@ function SlashHints({
   const hasArg = spaceIdx !== -1;
   const exactMatch = SLASH_COMMANDS.find(c => c.name === cmdPart);
 
-  // State 1: still typing the command name — show filtered popup
+  // State 1: typing the command name, no space yet
   if (!hasArg) {
     const matches = SLASH_COMMANDS.filter(c => c.name.startsWith(cmdPart));
+
+    // If there's exactly one match and it's an exact match, skip the
+    // popup and show the pill directly — the user has finished typing
+    // the command name. They just need to press Space or Tab to commit.
+    if (exactMatch && matches.length === 1) {
+      return (
+        <>
+          <div className="slash-active-cmd">
+            <span className="slash-active-cmd-pill">/{exactMatch.name}</span>
+            <span className="slash-active-cmd-desc">{exactMatch.description}</span>
+          </div>
+          {error && <div className="slash-error">{error}</div>}
+        </>
+      );
+    }
+
     if (matches.length === 0) return error ? <div className="slash-error">{error}</div> : null;
+
     return (
       <>
         <div className="slash-popup">
+          <div className="slash-popup-header">COMMANDS MATCHING /{cmdPart}</div>
           {matches.map(c => (
             <button
               key={c.name}
