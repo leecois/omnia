@@ -796,16 +796,12 @@ function ChannelPane({
         </div>
       ) : (
       <>
-      {/* Slash command suggestion popup */}
-      {draft.startsWith('/') && draft.indexOf(' ') === -1 && (
-        <SlashSuggestPopup
-          query={draft.slice(1).toLowerCase()}
-          onPick={cmd => { setDraft(`/${cmd} `); setSlashError(null); }}
-        />
-      )}
-      {slashError && (
-        <div className="slash-error">{slashError}</div>
-      )}
+      {/* Slash command suggestions + active-command pill */}
+      <SlashHints
+        draft={draft}
+        error={slashError}
+        onPick={cmd => { setDraft(`/${cmd} `); setSlashError(null); }}
+      />
       <form className="message-input" onSubmit={onSend}>
         <button
           type="button"
@@ -870,32 +866,75 @@ function ChannelPane({
   );
 }
 
-// ─── Slash command suggestion popup ──────────────────────────────────────────
+// ─── Slash command hints ─────────────────────────────────────────────────────
+//
+// Three visual states depending on what the user has typed:
+//
+//   1. Draft starts with `/` but no space yet (typing the command name)
+//      → show a filtered popup of matching commands
+//
+//   2. Draft starts with `/command ` and command is known (typing the arg)
+//      → hide the popup, show a highlighted "active command" pill with
+//        the command name + description so the user knows it's recognised
+//
+//   3. Draft doesn't start with `/`, OR the command is unrecognised
+//      → show nothing (or just the error strip if present)
 
-function SlashSuggestPopup({
-  query,
+function SlashHints({
+  draft,
+  error,
   onPick,
 }: {
-  query: string;
+  draft: string;
+  error: string | null;
   onPick: (cmd: string) => void;
 }) {
-  const matches = SLASH_COMMANDS.filter(c => c.name.startsWith(query));
-  if (matches.length === 0) return null;
-  return (
-    <div className="slash-popup">
-      {matches.map(c => (
-        <button
-          key={c.name}
-          type="button"
-          className="slash-popup-item"
-          onMouseDown={e => { e.preventDefault(); onPick(c.name); }}
-        >
-          <span className="slash-popup-name">/{c.name}</span>
-          <span className="slash-popup-desc">{c.description}</span>
-        </button>
-      ))}
-    </div>
-  );
+  if (!draft.startsWith('/')) return error ? <div className="slash-error">{error}</div> : null;
+
+  const spaceIdx = draft.indexOf(' ');
+  const cmdPart = spaceIdx === -1 ? draft.slice(1).toLowerCase() : draft.slice(1, spaceIdx).toLowerCase();
+  const hasArg = spaceIdx !== -1;
+  const exactMatch = SLASH_COMMANDS.find(c => c.name === cmdPart);
+
+  // State 1: still typing the command name — show filtered popup
+  if (!hasArg) {
+    const matches = SLASH_COMMANDS.filter(c => c.name.startsWith(cmdPart));
+    if (matches.length === 0) return error ? <div className="slash-error">{error}</div> : null;
+    return (
+      <>
+        <div className="slash-popup">
+          {matches.map(c => (
+            <button
+              key={c.name}
+              type="button"
+              className={`slash-popup-item ${c.name === cmdPart ? 'slash-popup-item-active' : ''}`}
+              onMouseDown={e => { e.preventDefault(); onPick(c.name); }}
+            >
+              <span className="slash-popup-name">/{c.name}</span>
+              <span className="slash-popup-desc">{c.description}</span>
+            </button>
+          ))}
+        </div>
+        {error && <div className="slash-error">{error}</div>}
+      </>
+    );
+  }
+
+  // State 2: command recognised + user is typing the argument
+  if (exactMatch) {
+    return (
+      <>
+        <div className="slash-active-cmd">
+          <span className="slash-active-cmd-pill">/{exactMatch.name}</span>
+          <span className="slash-active-cmd-desc">{exactMatch.description}</span>
+        </div>
+        {error && <div className="slash-error">{error}</div>}
+      </>
+    );
+  }
+
+  // State 3: unrecognised command
+  return error ? <div className="slash-error">{error}</div> : null;
 }
 
 // ─── Thread panel ────────────────────────────────────────────────────────────
