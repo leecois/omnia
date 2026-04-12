@@ -1676,6 +1676,45 @@ a:hover {
   text-overflow: ellipsis;
 }
 
+/* Highlighted textarea — mirror overlay technique. The wrapper is
+   position:relative so the mirror can sit behind the real textarea. */
+.slash-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+}
+.slash-input-mirror {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* Must match .message-input-textarea exactly: */
+  padding: 11px 10px 11px 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 22px;
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden;
+}
+.slash-input-mirror-cmd {
+  color: var(--brand-blurple);
+  font-weight: 700;
+}
+.slash-input-mirror-rest {
+  color: var(--text-normal);
+}
+/* When a command is active, hide the textarea's own text so the mirror
+   shows through, but keep the blinking caret visible. */
+.message-input-textarea.slash-input-active {
+  color: transparent;
+  caret-color: var(--text-normal);
+  position: relative;
+  z-index: 1;
+}
+
 .slash-error {
   margin: 0 16px 4px;
   padding: 8px 12px;

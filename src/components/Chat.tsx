@@ -819,10 +819,15 @@ function ChannelPane({
           </svg>
         </button>
 
-        <textarea
-          className="message-input-textarea"
-          value={draft}
+        <SlashHighlightInput
+          draft={draft}
           onChange={onDraftChange}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              onSend(e as unknown as React.FormEvent);
+            }
+          }}
           placeholder={
             !canWrite
               ? `You don't have write access to #${channel.name}`
@@ -832,14 +837,7 @@ function ChannelPane({
                 ? `Message #${channel.name} (slowmode: ${channel.slowmodeSeconds}s)`
                 : `Message #${channel.name}`
           }
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              onSend(e as unknown as React.FormEvent);
-            }
-          }}
           disabled={cooldownRemaining > 0 || !canWrite}
-          rows={1}
         />
 
         <div className="message-input-tools">
@@ -935,6 +933,56 @@ function SlashHints({
 
   // State 3: unrecognised command
   return error ? <div className="slash-error">{error}</div> : null;
+}
+
+// ─── Slash-highlighted textarea ──────────────────────────────────────────────
+//
+// Uses the "mirror overlay" technique to highlight the /command portion in
+// blurple inside a regular <textarea>:
+//
+//   - A mirror <div> sits BEHIND the textarea, same font/padding/size.
+//     It renders the command portion in blurple and the rest in normal color.
+//   - When a command is active, the textarea's text color becomes transparent
+//     (so the mirror's colors show through) but the caret stays visible.
+//   - When no command, the textarea renders normally — no mirror shown.
+
+function SlashHighlightInput({
+  draft,
+  onChange,
+  onKeyDown,
+  placeholder,
+  disabled,
+}: {
+  draft: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  placeholder: string;
+  disabled: boolean;
+}) {
+  // Detect a matched command in the draft.
+  const parsed = draft.startsWith('/') ? parseSlash(draft) : null;
+  const matched = parsed ? SLASH_COMMANDS.find(c => c.name === parsed.cmd) : null;
+  const cmdLen = matched ? matched.name.length + 1 : 0; // +1 for the leading /
+
+  return (
+    <div className="slash-input-wrap">
+      {matched && (
+        <div className="slash-input-mirror" aria-hidden="true">
+          <span className="slash-input-mirror-cmd">{draft.slice(0, cmdLen)}</span>
+          <span className="slash-input-mirror-rest">{draft.slice(cmdLen)}</span>
+        </div>
+      )}
+      <textarea
+        className={`message-input-textarea ${matched ? 'slash-input-active' : ''}`}
+        value={draft}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        disabled={disabled}
+        rows={1}
+      />
+    </div>
+  );
 }
 
 // ─── Thread panel ────────────────────────────────────────────────────────────
