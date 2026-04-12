@@ -41,10 +41,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # ── Environment files ────────────────────────────────────────────
-# Keep .env.example tracked; ignore everything else
+# Keep example templates tracked; ignore everything else
 .env
 .env.*
 !.env.example
+!.env.local.example
 
 # ── SpacetimeDB ──────────────────────────────────────────────────
 # Backend build artifacts
