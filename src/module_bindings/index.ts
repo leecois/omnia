@@ -55,6 +55,7 @@ import EnsureAiConfigReducer from "./ensure_ai_config_reducer";
 import FailAskRequestReducer from "./fail_ask_request_reducer";
 import GrantSpecialRoleReducer from "./grant_special_role_reducer";
 import GrantSuperAdminReducer from "./grant_super_admin_reducer";
+import JoinAsBotReducer from "./join_as_bot_reducer";
 import JoinServerReducer from "./join_server_reducer";
 import KickMemberReducer from "./kick_member_reducer";
 import LeaveServerReducer from "./leave_server_reducer";
@@ -436,6 +437,7 @@ const reducersSchema = __reducers(
   __reducerSchema("fail_ask_request", FailAskRequestReducer),
   __reducerSchema("grant_special_role", GrantSpecialRoleReducer),
   __reducerSchema("grant_super_admin", GrantSuperAdminReducer),
+  __reducerSchema("join_as_bot", JoinAsBotReducer),
   __reducerSchema("join_server", JoinServerReducer),
   __reducerSchema("kick_member", KickMemberReducer),
   __reducerSchema("leave_server", LeaveServerReducer),

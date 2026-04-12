@@ -36,8 +36,22 @@ export class RAGHandler {
     private conn: DbConnection,
     private qdrant: QdrantStore,
     private llm: LLMAdapter,
-    private cfg: BotConfig
+    private cfg: BotConfig,
+    private botIdentityHex: string
   ) {}
+
+  /** Ensure the bot is a server_member so send_message won't reject it. */
+  private async ensureBotMember(serverId: bigint): Promise<void> {
+    for (const m of this.conn.db.server_member.byServerId.filter(serverId)) {
+      if (m.userIdentity.toHexString() === this.botIdentityHex) return;
+    }
+    try {
+      await this.conn.reducers.joinAsBot({ serverId });
+      console.log(`[rag] joined server ${serverId} as bot member`);
+    } catch {
+      // Idempotent — ignore "already a member" races.
+    }
+  }
 
   /** Scan existing pending rows on startup, then watch for new inserts. */
   start(): void {
@@ -112,6 +126,7 @@ export class RAGHandler {
 
     if (contexts.length === 0) {
       // No sources — degrade gracefully with a "not found" answer.
+      await this.ensureBotMember(req.serverId);
       const answerText =
         `I couldn't find anything in the docs that answers **"${req.question}"**. ` +
         'Try rephrasing or ask a human member of the server.';
@@ -136,7 +151,10 @@ export class RAGHandler {
       .join('  ');
     const answerText = `${res.text}\n\n_Sources: ${citations}_`;
 
-    // 7. Post the answer and resolve.
+    // 7. Ensure the bot is a member before posting (no-op if already joined).
+    await this.ensureBotMember(req.serverId);
+
+    // 8. Post the answer and resolve.
     await this.postAnswer(req, answerText, res.inputTokens, res.outputTokens, res.costMicros);
   }
 

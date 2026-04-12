@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   await ingester.backfillAll();
 
   // RAG handler.
-  const rag = new RAGHandler(conn, qdrant, llm, cfg);
+  const rag = new RAGHandler(conn, qdrant, llm, cfg, identityHex);
   rag.start();
 
   console.log('[boot] bot is running — Ctrl-C to stop');

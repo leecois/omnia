@@ -29,6 +29,25 @@ export class Ingester {
     private botIdentityHex: string
   ) {}
 
+  /** Call joinAsBot so send_message won't reject the bot for not being a member. */
+  private async ensureBotMember(serverId: bigint): Promise<void> {
+    // Check local cache first — avoid a reducer round-trip if already joined.
+    const hex = this.botIdentityHex;
+    for (const m of this.conn.db.server_member.byServerId.filter(serverId)) {
+      if (m.userIdentity.toHexString() === hex) return;
+    }
+    try {
+      await this.conn.reducers.joinAsBot({ serverId });
+      console.log(`[ingest] joined server ${serverId} as bot member`);
+    } catch (err) {
+      // "already a member" is fine — another code path may have raced us.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('already a member')) {
+        console.error(`[ingest] joinAsBot failed for server ${serverId}:`, msg);
+      }
+    }
+  }
+
   /** Return the serverId for a given channelId, or null if unknown. */
   private serverIdForChannel(channelId: bigint): bigint | null {
     const ch = this.conn.db.channel.id.find(channelId);
@@ -116,6 +135,9 @@ export class Ingester {
     const key = serverId.toString();
     if (this.backfilled.has(key)) return;
     this.backfilled.add(key);
+
+    // Ensure the bot is a member of this server before anything else.
+    await this.ensureBotMember(serverId);
 
     // Collect every human message in this server.
     const batch: Message[] = [];

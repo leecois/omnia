@@ -1933,6 +1933,49 @@ export const fail_ask_request = spacetimedb.reducer(
 );
 
 // ============================================================================
+// BOT MEMBERSHIP
+// ============================================================================
+//
+// When AI is enabled on a server the sidecar bot needs to call send_message,
+// which requires a server_member row. This reducer lets the bot self-register
+// as a 'bot' member. Guard: ai_config.enabled must be true for the server.
+
+export const join_as_bot = spacetimedb.reducer(
+  { serverId: t.u64() },
+  (ctx, { serverId }) => {
+    const srv = ctx.db.server.id.find(serverId);
+    if (!srv) throw new SenderError('Server not found');
+
+    const cfg = ctx.db.ai_config.serverId.find(serverId);
+    if (!cfg || !cfg.enabled) {
+      throw new SenderError('AI is not enabled on this server');
+    }
+
+    // Idempotent — skip if already a member.
+    if (getMember(ctx, serverId)) return;
+
+    ctx.db.server_member.insert({
+      id: 0n,
+      serverId,
+      userIdentity: ctx.sender,
+      nickname: 'Omnia AI',
+      role: 'bot',
+      joinedAt: ctx.timestamp,
+    });
+
+    // Assign the @everyone role so permission checks pass.
+    const roleId = ensureDefaultRole(ctx, serverId, isDefaultServer(serverId));
+    ctx.db.member_role.insert({
+      id: 0n,
+      serverId,
+      userIdentity: ctx.sender,
+      roleId,
+      assignedAt: ctx.timestamp,
+    });
+  }
+);
+
+// ============================================================================
 // Dev-admin break-glass reducers (Admin Impersonation)
 // ============================================================================
 //
