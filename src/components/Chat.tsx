@@ -40,6 +40,11 @@ interface SlashCommand {
 
 const SLASH_COMMANDS: SlashCommand[] = [
   {
+    name: 'ask',
+    description: 'Ask the AI assistant a question (RAG-grounded)',
+    transform: a => a, // handled specially — intercepted before sendMessage
+  },
+  {
     name: 'shrug',
     description: 'Appends ¯\\_(ツ)_/¯ to your message',
     transform: a => (a ? `${a} ¯\\_(ツ)_/¯` : '¯\\_(ツ)_/¯'),
@@ -573,6 +578,7 @@ function ChannelPane({
   const [replyTo, setReplyTo] = useState<MessageRow | null>(null);
   const [draft, setDraft] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [slashError, setSlashError] = useState<string | null>(null);
 
   const sendMessage = useReducer(reducers.sendMessage);
   const setTypingReducer = useReducer(reducers.setTyping);
@@ -596,14 +602,19 @@ function ChannelPane({
     if (!draft.trim() && !attachmentUrl) return;
     if (cooldownRemaining > 0) return;
 
-    // /ask <question> — route to the AI RAG pipeline instead of sending
-    // a normal message. The bot picks up the pending ask_request row via
-    // its subscription and posts the answer as a separate message.
+    // /ask [question] — route to the AI RAG pipeline. Matches both
+    // "/ask some question" and "/ask" (standalone, prompts for question).
     const trimmed = draft.trim();
-    if (trimmed.toLowerCase().startsWith('/ask ')) {
-      const question = trimmed.slice(5).trim();
-      if (question.length === 0) return;
+    const askMatch = trimmed.match(/^\/ask(?:\s+(.+))?$/i);
+    if (askMatch) {
+      const question = (askMatch[1] ?? '').trim();
+      if (question.length === 0) {
+        // User typed just "/ask" with no question — don't send, just hint
+        setSlashError('Type your question after /ask, e.g. /ask What is this server about?');
+        return;
+      }
       setDraft('');
+      setSlashError(null);
       createAskRequest({
         channelId: channel.id,
         threadId: 0n,
@@ -611,7 +622,7 @@ function ChannelPane({
       }).catch(err => {
         console.error(err);
         setDraft(trimmed);
-        alert(String(err?.message ?? err));
+        setSlashError(String(err?.message ?? err));
       });
       return;
     }
@@ -647,6 +658,7 @@ function ChannelPane({
 
   const onDraftChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDraft(e.target.value);
+    if (slashError) setSlashError(null);
     const now = Date.now();
     if (now - lastTypingRef.current > TYPING_DEBOUNCE_MS) {
       lastTypingRef.current = now;
@@ -783,6 +795,17 @@ function ChannelPane({
           You do not have permission to send messages in this channel.
         </div>
       ) : (
+      <>
+      {/* Slash command suggestion popup */}
+      {draft.startsWith('/') && draft.indexOf(' ') === -1 && (
+        <SlashSuggestPopup
+          query={draft.slice(1).toLowerCase()}
+          onPick={cmd => { setDraft(`/${cmd} `); setSlashError(null); }}
+        />
+      )}
+      {slashError && (
+        <div className="slash-error">{slashError}</div>
+      )}
       <form className="message-input" onSubmit={onSend}>
         <button
           type="button"
@@ -841,7 +864,36 @@ function ChannelPane({
           </button>
         </div>
       </form>
+      </>
       )}
+    </div>
+  );
+}
+
+// ─── Slash command suggestion popup ──────────────────────────────────────────
+
+function SlashSuggestPopup({
+  query,
+  onPick,
+}: {
+  query: string;
+  onPick: (cmd: string) => void;
+}) {
+  const matches = SLASH_COMMANDS.filter(c => c.name.startsWith(query));
+  if (matches.length === 0) return null;
+  return (
+    <div className="slash-popup">
+      {matches.map(c => (
+        <button
+          key={c.name}
+          type="button"
+          className="slash-popup-item"
+          onMouseDown={e => { e.preventDefault(); onPick(c.name); }}
+        >
+          <span className="slash-popup-name">/{c.name}</span>
+          <span className="slash-popup-desc">{c.description}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -899,11 +951,12 @@ function ThreadPanel({
     e.preventDefault();
     if (!draft.trim()) return;
 
-    // /ask <question> — route to the AI bot inside this thread.
+    // /ask [question] — route to the AI bot inside this thread.
     const trimmed = draft.trim();
-    if (trimmed.toLowerCase().startsWith('/ask ')) {
-      const question = trimmed.slice(5).trim();
-      if (question.length === 0) return;
+    const askMatch = trimmed.match(/^\/ask(?:\s+(.+))?$/i);
+    if (askMatch) {
+      const question = (askMatch[1] ?? '').trim();
+      if (question.length === 0) return; // thread input is smaller; just ignore
       setDraft('');
       createAskRequest({
         channelId,
@@ -912,7 +965,6 @@ function ThreadPanel({
       }).catch(err => {
         console.error(err);
         setDraft(trimmed);
-        alert(String(err?.message ?? err));
       });
       return;
     }

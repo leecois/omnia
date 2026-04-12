@@ -1589,6 +1589,67 @@ a:hover {
    Chat read-only banner (insufficient permissions)
    ============================================================================ */
 
+/* ── Slash command popup ──────────────────────────────────────── */
+
+.slash-popup {
+  position: relative;
+  margin: 0 16px 4px;
+  padding: 6px;
+  background: var(--bg-floating, #18191c);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-high);
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 10;
+}
+.slash-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-normal);
+  font-family: inherit;
+  transition: background 0.1s ease;
+}
+.slash-popup-item:hover {
+  background: var(--brand-blurple);
+  color: #fff;
+}
+.slash-popup-item:hover .slash-popup-desc {
+  color: rgba(255, 255, 255, 0.7);
+}
+.slash-popup-name {
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  min-width: 90px;
+}
+.slash-popup-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slash-error {
+  margin: 0 16px 4px;
+  padding: 8px 12px;
+  background: rgba(242, 63, 67, 0.1);
+  border: 1px solid var(--red-400);
+  border-radius: var(--radius-sm);
+  color: var(--red-400);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .chat-noperm-bar {
   margin: 0 16px 24px;
   padding: 11px 16px;
