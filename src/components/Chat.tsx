@@ -729,33 +729,7 @@ function ChannelPane({
         </div>
       )}
 
-      {(() => {
-        const parsed = parseSlash(draft);
-        const suggestions = parsed
-          ? SLASH_COMMANDS.filter(c => c.name.startsWith(parsed.cmd))
-          : [];
-        if (suggestions.length === 0 || !parsed) return null;
-        return (
-          <div className="slash-autocomplete">
-            <div className="slash-autocomplete-header">
-              COMMANDS MATCHING <b>/{parsed.cmd}</b>
-            </div>
-            {suggestions.map(cmd => (
-              <button
-                key={cmd.name}
-                type="button"
-                className="slash-autocomplete-item"
-                onClick={() => {
-                  setDraft(`/${cmd.name} `);
-                }}
-              >
-                <span className="slash-autocomplete-name">/{cmd.name}</span>
-                <span className="slash-autocomplete-desc">{cmd.description}</span>
-              </button>
-            ))}
-          </div>
-        );
-      })()}
+      {/* Old slash-autocomplete removed — replaced by SlashHints above the form */}
 
       {replyTo && (
         <div className="reply-banner">
@@ -823,17 +797,6 @@ function ChannelPane({
           draft={draft}
           onChange={onDraftChange}
           onKeyDown={e => {
-            // Tab autocompletes the first matching slash command
-            if (e.key === 'Tab' && draft.startsWith('/') && draft.indexOf(' ') === -1) {
-              const partial = draft.slice(1).toLowerCase();
-              const match = SLASH_COMMANDS.find(c => c.name.startsWith(partial));
-              if (match) {
-                e.preventDefault();
-                setDraft(`/${match.name} `);
-                setSlashError(null);
-                return;
-              }
-            }
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               onSend(e as unknown as React.FormEvent);
@@ -905,31 +868,13 @@ function SlashHints({
   const hasArg = spaceIdx !== -1;
   const exactMatch = SLASH_COMMANDS.find(c => c.name === cmdPart);
 
-  // State 1: typing the command name, no space yet
+  // State 1: still typing the command name — show filtered popup
   if (!hasArg) {
     const matches = SLASH_COMMANDS.filter(c => c.name.startsWith(cmdPart));
-
-    // If there's exactly one match and it's an exact match, skip the
-    // popup and show the pill directly — the user has finished typing
-    // the command name. They just need to press Space or Tab to commit.
-    if (exactMatch && matches.length === 1) {
-      return (
-        <>
-          <div className="slash-active-cmd">
-            <span className="slash-active-cmd-pill">/{exactMatch.name}</span>
-            <span className="slash-active-cmd-desc">{exactMatch.description}</span>
-          </div>
-          {error && <div className="slash-error">{error}</div>}
-        </>
-      );
-    }
-
     if (matches.length === 0) return error ? <div className="slash-error">{error}</div> : null;
-
     return (
       <>
         <div className="slash-popup">
-          <div className="slash-popup-header">COMMANDS MATCHING /{cmdPart}</div>
           {matches.map(c => (
             <button
               key={c.name}
