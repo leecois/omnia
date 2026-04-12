@@ -29,9 +29,6 @@ COPY src/module_bindings/ src/module_bindings/
 COPY ai-bot/src/ ai-bot/src/
 COPY ai-bot/tsconfig.json ai-bot/
 
-# Bot token is persisted so restarts keep the same identity.
-VOLUME ["/app/ai-bot/.bot-token"]
-
 WORKDIR /app/ai-bot
 
 CMD ["bun", "run", "src/index.ts"]
