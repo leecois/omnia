@@ -358,100 +358,28 @@ The following tables and reducers were added to support AI features:
 
 ## Deployment
 
-Omnia uses [SpacetimeDB maincloud](https://maincloud.spacetimedb.com) as its
-backend, so production deployment only ships the Vite SPA — a single
-container built in CI and served via nginx on [Dokploy](https://dokploy.com).
-
-### Architecture
-
-```
-  GitHub push → GitHub Actions → GHCR image → Dokploy API → Dokploy pulls & runs
-                                                                │
-                                                                ▼
-                                                          nginx (Vite SPA)
-                                                                │
-                                                                ▼
-                                              SpacetimeDB maincloud (WSS)
-```
-
-Per [Dokploy's Going Production guide](https://docs.dokploy.com/docs/core/applications/going-production),
-builds happen in CI — never on the production server — to keep the VPS
-lightweight and deployments fast.
-
-### One-time setup
-
-**1. GitHub — repository variables** (`Settings → Secrets and variables → Actions → Variables`)
-
-| Variable | Example | Baked into the SPA at build time |
-|----------|---------|---|
-| `VITE_SPACETIMEDB_HOST` | `https://maincloud.spacetimedb.com` | ✅ |
-| `VITE_SPACETIMEDB_DB_NAME` | `your-database-name` | ✅ |
-
-**2. GitHub — repository secrets** (same page → Secrets)
-
-| Secret | Description |
-|--------|-------------|
-| `DOKPLOY_BASE_URL` | e.g. `https://dokploy.yourhost.com` |
-| `DOKPLOY_API_KEY` | From Dokploy → Profile → API keys |
-| `DOKPLOY_APP_ID` | The application ID from Dokploy |
-
-**3. Dokploy — create the application**
-
-- **Source Type**: Docker
-- **Image**: `ghcr.io/<your-github-user>/<repo>:latest`
-- **Port**: `80`
-- **Domain**: configure in the Domains tab — Dokploy wires up Traefik and Let's Encrypt automatically
-- **Health Check** (Advanced → Swarm Settings):
-  ```json
-  { "Test": ["CMD", "curl", "-f", "http://localhost:80/healthz"],
-    "Interval": 30000000000, "Timeout": 10000000000,
-    "StartPeriod": 10000000000, "Retries": 3 }
-  ```
-- **Update Config** (Advanced → Swarm Settings) for zero-downtime rollouts:
-  ```json
-  { "Parallelism": 1, "Delay": 10000000000,
-    "FailureAction": "rollback", "Order": "start-first" }
-  ```
-
-### How a deploy works
-
-1. Push to `main` triggers `.github/workflows/deploy.yml`.
-2. GitHub Actions builds the Docker image with `VITE_*` build args and pushes
-   `ghcr.io/<user>/<repo>:latest` and `<sha>` tags to GHCR (cached via `type=gha`).
-3. The workflow calls `POST /api/application.deploy` on Dokploy to trigger a
-   rolling update using the `start-first` strategy, falling back on any
-   healthcheck failure.
-
-### Backend (SpacetimeDB) deployment
-
-The backend module isn't in the Docker image — it's published directly to
-maincloud from your local machine or a separate CI job:
+The frontend is a static Vite SPA. Build it with:
 
 ```bash
-bun run spacetime:publish              # publish to maincloud
-bun run spacetime:generate             # regenerate client bindings
-git commit -am "feat: schema change"   # then deploy the frontend
+VITE_SPACETIMEDB_HOST=https://maincloud.spacetimedb.com \
+VITE_SPACETIMEDB_DB_NAME=your-database-name \
+bun run build
 ```
 
-### Why a Dockerfile and not docker-compose
+Serve the `dist/` folder with any static host (nginx, Caddy, Vercel, Netlify,
+Cloudflare Pages, etc.). A `Dockerfile` and `docker/nginx.conf` are included
+if you prefer a container.
 
-Omnia is a single-image application — there's no database or background
-worker to orchestrate, and the SpacetimeDB runtime is hosted for us. A
-plain Dockerfile lets Dokploy's **Application (Docker)** source type handle
-Traefik labels, TLS, healthchecks, and rolling updates entirely through
-its UI, per Dokploy's production guide.
-
-### Local smoke test
+The backend module is published separately:
 
 ```bash
-docker build \
-  --build-arg VITE_SPACETIMEDB_HOST=https://maincloud.spacetimedb.com \
-  --build-arg VITE_SPACETIMEDB_DB_NAME=your-database-name \
-  -t omnia:local .
-
-docker run --rm -p 8080:80 omnia:local
-# → http://localhost:8080
+bun run spacetime:publish    # publish to maincloud
+bun run spacetime:generate   # regenerate client bindings after schema changes
 ```
+
+The AI bot (`ai-bot/`) is a long-running Bun process — run it wherever you
+like (VPS, container, managed hosting). See the [AI assistant](#ai-assistant-ask)
+section for setup details.
 
 ## License
 
