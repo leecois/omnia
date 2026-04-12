@@ -722,7 +722,7 @@ function ChannelPane({
       {replyTo && (
         <div className="reply-banner">
           <span>
-            Replying to <b>{userByHex.get(replyTo.authorId.toHexString())?.name ?? 'someone'}</b>
+            Replying to <b>{nicknameByHex?.get(replyTo.authorId.toHexString()) || userByHex.get(replyTo.authorId.toHexString())?.name || generateAlias(replyTo.authorId.toHexString())}</b>
             {' — '}
             <span className="reply-quote-preview">{replyTo.text.slice(0, 100)}</span>
           </span>
@@ -1396,9 +1396,9 @@ function MessageList({
                     color: userByHex.get(replyParent.authorId.toHexString())?.avatarColor ?? '#999',
                   }}
                 >
-                  {nicknameByHex?.get(replyParent.authorId.toHexString()) ??
-                    userByHex.get(replyParent.authorId.toHexString())?.name ??
-                    'unknown'}
+                  {nicknameByHex?.get(replyParent.authorId.toHexString()) ||
+                    userByHex.get(replyParent.authorId.toHexString())?.name ||
+                    generateAlias(replyParent.authorId.toHexString())}
                 </span>
                 <span className="reply-quote-text">{replyParent.text.slice(0, 80)}</span>
               </div>
