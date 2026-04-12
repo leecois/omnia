@@ -13,7 +13,6 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "ci": "biome ci .",
-    "generate": "cargo run -p gen-bindings -- --out-dir src/module_bindings --module-path spacetimedb && biome format --write src/module_bindings",
     "spacetime:generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "spacetime:publish:local": "spacetime publish --module-path spacetimedb --server local -y",
     "spacetime:publish": "spacetime publish --module-path spacetimedb --server maincloud -y"

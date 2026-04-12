@@ -52,6 +52,9 @@ spacetimedb/dist/
 spacetimedb/target/
 # Auth token cache (if ever written locally)
 .spacetime/
+# Developer-specific CLI config (database name, server target)
+spacetime.json
+spacetime.local.json
 
 # ── Caches ───────────────────────────────────────────────────────
 .cache/
