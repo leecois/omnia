@@ -46,18 +46,28 @@ bun install
 # 2. Copy environment template and fill in your values
 cp .env.local.example .env.local
 
-# 3. Start the SpacetimeDB server locally (optional — skip to use maincloud)
+# 3. Create your SpacetimeDB CLI config (gitignored — each developer has their own)
+cat > spacetime.json << 'EOF'
+{
+  "dev": { "run": "bun run dev" },
+  "server": "maincloud",
+  "database": "your-database-name",
+  "module-path": "./spacetimedb"
+}
+EOF
+
+# 4. Start the SpacetimeDB server locally (optional — skip to use maincloud)
 spacetime start
 
-# 4. Publish the backend module
+# 5. Publish the backend module
 bun run spacetime:publish:local   # local
 # or
 bun run spacetime:publish         # maincloud
 
-# 5. Regenerate client bindings after any backend change
+# 6. Regenerate client bindings after any backend change
 bun run spacetime:generate
 
-# 6. Start the dev server
+# 7. Start the dev server
 bun run dev
 ```
 
@@ -100,7 +110,7 @@ omnia/
 ├── spacetimedb/
 │   └── src/index.ts              # Backend: tables, reducers, lifecycle hooks
 ├── biome.json                    # Biome lint + format config
-├── spacetime.json                # SpacetimeDB CLI config
+├── spacetime.json                # SpacetimeDB CLI config (gitignored — create locally)
 └── vite.config.ts
 ```
 
