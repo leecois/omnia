@@ -5,11 +5,11 @@
 
 :root {
   /* ── Backgrounds ─────────────────────────────────────────────────────── */
-  --bg-tertiary: #1e1f22;            /* server rail, deepest layer */
-  --bg-secondary: #2b2d31;           /* channel panel, member panel */
-  --bg-secondary-alt: #232428;       /* user footer, nested containers */
-  --bg-primary: #313338;             /* chat area */
-  --bg-floating: #111214;            /* modals, popouts, tooltips */
+  --bg-tertiary: #1e1f22; /* server rail, deepest layer */
+  --bg-secondary: #2b2d31; /* channel panel, member panel */
+  --bg-secondary-alt: #232428; /* user footer, nested containers */
+  --bg-primary: #313338; /* chat area */
+  --bg-floating: #111214; /* modals, popouts, tooltips */
   --bg-accent: #4e5058;
   --bg-modifier-hover: rgba(78, 80, 88, 0.24);
   --bg-modifier-active: rgba(78, 80, 88, 0.48);
@@ -48,8 +48,8 @@
   /* ── Borders / Misc ──────────────────────────────────────────────────── */
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-strong: rgba(0, 0, 0, 0.3);
-  --elevation-low: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05),
-    0 2px 0 rgba(4, 4, 5, 0.05);
+  --elevation-low:
+    0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05);
   --elevation-medium: 0 4px 4px rgba(0, 0, 0, 0.16);
   --elevation-high: 0 8px 16px rgba(0, 0, 0, 0.24);
 
@@ -82,8 +82,9 @@ body,
   height: 100%;
   background: var(--bg-primary);
   color: var(--text-normal);
-  font-family: 'Inter', 'gg sans', 'Noto Sans', -apple-system, BlinkMacSystemFont,
-    'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  font-family:
+    "Inter", "gg sans", "Noto Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    "Helvetica", "Arial", sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 1.375;
@@ -117,9 +118,10 @@ textarea {
 
 code,
 pre {
-  font-family: 'JetBrains Mono', Consolas, 'Andale Mono WT', 'Andale Mono', 'Lucida Console',
-    'Lucida Sans Typewriter', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono',
-    'Liberation Mono', 'Nimbus Mono L', Monaco, 'Courier New', Courier, monospace;
+  font-family:
+    "JetBrains Mono", Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console",
+    "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono",
+    "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
 }
 
 a {
@@ -275,7 +277,7 @@ a:hover {
 
 /* Left pill indicator — Discord's signature */
 .server-icon::before {
-  content: '';
+  content: "";
   position: absolute;
   left: -16px;
   top: 50%;
@@ -284,7 +286,9 @@ a:hover {
   background: #ffffff;
   border-radius: 0 4px 4px 0;
   transform: translateY(-50%) scale(0);
-  transition: transform 0.15s ease-out, height 0.15s ease-out;
+  transition:
+    transform 0.15s ease-out,
+    height 0.15s ease-out;
 }
 
 .server-icon:hover::before {
@@ -483,7 +487,9 @@ a:hover {
   font-weight: 500;
   height: 32px;
   position: relative;
-  transition: background-color 0.05s ease-out, color 0.05s ease-out;
+  transition:
+    background-color 0.05s ease-out,
+    color 0.05s ease-out;
 }
 
 .channel-item:hover {
@@ -988,7 +994,9 @@ a:hover {
   font-size: 18px;
   line-height: 1;
   padding: 0;
-  transition: background 0.1s ease-out, color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    color 0.1s ease-out;
 }
 
 .msg-tool-btn:hover {
@@ -1040,7 +1048,9 @@ a:hover {
   border: none;
   border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: background 0.1s ease-out, transform 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    transform 0.1s ease-out;
 }
 
 .msg-ctx-emoji:hover {
@@ -1236,7 +1246,9 @@ a:hover {
   border-radius: var(--radius-sm);
   color: var(--interactive-normal);
   cursor: pointer;
-  transition: background 0.1s ease-out, color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    color 0.1s ease-out;
 }
 
 .emoji-picker-cat:hover {
@@ -1281,7 +1293,9 @@ a:hover {
   border-radius: var(--radius-xs);
   font-size: 22px;
   cursor: pointer;
-  transition: background 0.1s ease-out, transform 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    transform 0.1s ease-out;
 }
 
 .emoji-picker-cell:hover {
@@ -1382,7 +1396,9 @@ a:hover {
   font-weight: 500;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.1s ease-out, border-color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    border-color 0.1s ease-out;
 }
 
 .reaction-pill:hover {
@@ -1420,7 +1436,7 @@ a:hover {
 
 /* L-shape connector from the avatar column up to the reply text */
 .reply-quote-line::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 36px;
   top: 12px;
@@ -1683,7 +1699,7 @@ a:hover {
   flex: 1;
   min-width: 0;
   align-self: center;
-  display: flex;         /* so the textarea's flex:1 works inside */
+  display: flex; /* so the textarea's flex:1 works inside */
   align-items: flex-start;
 }
 .slash-input-mirror {
@@ -1945,7 +1961,7 @@ a:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   color: var(--text-normal);
 }
@@ -2052,7 +2068,7 @@ a:hover {
 
 .thread-divider::before,
 .thread-divider::after {
-  content: '';
+  content: "";
   flex: 1;
   height: 1px;
   background: var(--border-subtle);
@@ -2333,7 +2349,7 @@ a:hover {
   font-weight: 500 !important;
 }
 
-.checkbox-label input[type='checkbox'] {
+.checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: var(--brand-blurple);
@@ -2346,10 +2362,9 @@ a:hover {
   gap: 8px;
   justify-content: flex-end;
   padding: 16px;
-  margin-top: 8px;
   background: var(--bg-secondary-alt);
   border-top: 1px solid var(--border-subtle);
-  margin: 0 -16px -16px;
+  margin: 8px -16px -16px;
 }
 
 .btn-primary,
@@ -2359,7 +2374,9 @@ a:hover {
   border-radius: var(--radius-xs);
   font-weight: 500;
   font-size: 14px;
-  transition: background-color 0.17s ease-out, color 0.17s ease-out;
+  transition:
+    background-color 0.17s ease-out,
+    color 0.17s ease-out;
 }
 
 .btn-primary {
@@ -2450,7 +2467,9 @@ a:hover {
   color: var(--interactive-normal);
   cursor: pointer;
   border-radius: var(--radius-xs);
-  transition: color 0.1s ease-out, background 0.1s ease-out;
+  transition:
+    color 0.1s ease-out,
+    background 0.1s ease-out;
   z-index: 1;
 }
 
@@ -2481,7 +2500,9 @@ a:hover {
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: background 0.1s ease-out, border-color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    border-color 0.1s ease-out;
 }
 
 .create-server-option:hover {
@@ -2552,8 +2573,12 @@ a:hover {
 }
 
 @keyframes settings-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .settings-sidebar {
@@ -2618,7 +2643,9 @@ a:hover {
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background 0.1s ease-out, color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    color 0.1s ease-out;
 }
 
 .settings-nav-item:hover {
@@ -2771,7 +2798,9 @@ a:hover {
   border-radius: var(--radius-sm);
   border: 2px solid transparent;
   cursor: pointer;
-  transition: transform 0.1s ease-out, border-color 0.1s ease-out;
+  transition:
+    transform 0.1s ease-out,
+    border-color 0.1s ease-out;
 }
 
 .profile-banner-swatch:hover:not(:disabled) {
@@ -2780,7 +2809,9 @@ a:hover {
 
 .profile-banner-swatch.selected {
   border-color: #ffffff;
-  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--brand-blurple);
+  box-shadow:
+    0 0 0 2px var(--bg-primary),
+    0 0 0 4px var(--brand-blurple);
 }
 
 .profile-banner-swatch:disabled {
@@ -2982,7 +3013,9 @@ a:hover {
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background 0.1s ease-out, color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    color 0.1s ease-out;
 }
 
 .role-list-item:hover {
@@ -3076,7 +3109,7 @@ a:hover {
   background: var(--bg-modifier-hover);
 }
 
-.role-perm-row input[type='checkbox'] {
+.role-perm-row input[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: var(--brand-blurple);
@@ -3162,7 +3195,9 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.1s ease-out, color 0.1s ease-out;
+  transition:
+    border-color 0.1s ease-out,
+    color 0.1s ease-out;
 }
 
 .settings-close-esc:hover .settings-close-esc-icon {
@@ -3217,7 +3252,7 @@ a:hover {
   color: var(--header-secondary);
 }
 
-.settings-field input[type='text'],
+.settings-field input[type="text"],
 .settings-field textarea {
   display: block;
   width: 100%;
@@ -3265,7 +3300,7 @@ a:hover {
   cursor: pointer;
 }
 
-.settings-checkbox-row input[type='checkbox'] {
+.settings-checkbox-row input[type="checkbox"] {
   width: 20px;
   height: 20px;
   accent-color: var(--brand-blurple);
@@ -3396,7 +3431,9 @@ a:hover {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.1s ease-out, color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    color 0.1s ease-out;
 }
 
 .settings-row-action:hover {
@@ -3595,7 +3632,7 @@ a:hover {
 }
 
 .settings-invite-code {
-  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-family: "SF Mono", "Monaco", "Consolas", monospace;
   font-size: 14px;
   font-weight: 600;
   color: var(--header-primary);
@@ -3671,7 +3708,9 @@ a:hover {
   font-weight: 600;
   cursor: pointer;
 }
-.ch-setup-reseed-btn:hover { filter: brightness(1.12); }
+.ch-setup-reseed-btn:hover {
+  filter: brightness(1.12);
+}
 
 .ch-setup-reseed-confirm {
   display: flex;
@@ -3695,7 +3734,9 @@ a:hover {
   font-weight: 600;
   cursor: pointer;
 }
-.ch-setup-btn-danger:hover { filter: brightness(1.1); }
+.ch-setup-btn-danger:hover {
+  filter: brightness(1.1);
+}
 
 .ch-setup-body {
   display: flex;
@@ -3720,7 +3761,7 @@ a:hover {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
-  letter-spacing: .05em;
+  letter-spacing: 0.05em;
   flex: 1;
 }
 
@@ -3737,8 +3778,12 @@ a:hover {
   border-radius: 4px;
   min-height: 36px;
 }
-.ch-setup-channel-row:hover { background: var(--bg-hover); }
-.ch-setup-channel-row:hover .ch-setup-row-actions { opacity: 1; }
+.ch-setup-channel-row:hover {
+  background: var(--bg-hover);
+}
+.ch-setup-channel-row:hover .ch-setup-row-actions {
+  opacity: 1;
+}
 
 .ch-setup-hash {
   font-size: 16px;
@@ -3773,7 +3818,7 @@ a:hover {
   display: flex;
   gap: 4px;
   opacity: 0;
-  transition: opacity .1s;
+  transition: opacity 0.1s;
   flex-shrink: 0;
 }
 
@@ -3787,8 +3832,13 @@ a:hover {
   display: flex;
   align-items: center;
 }
-.ch-setup-icon-btn:hover { background: var(--bg-modifier-hover); color: var(--text-normal); }
-.ch-setup-icon-btn.danger:hover { color: #ed4245; }
+.ch-setup-icon-btn:hover {
+  background: var(--bg-modifier-hover);
+  color: var(--text-normal);
+}
+.ch-setup-icon-btn.danger:hover {
+  color: #ed4245;
+}
 
 .ch-setup-inline-edit {
   display: flex;
@@ -3809,7 +3859,9 @@ a:hover {
   min-width: 120px;
   outline: none;
 }
-.ch-setup-input:focus { border-color: var(--brand); }
+.ch-setup-input:focus {
+  border-color: var(--brand);
+}
 
 .ch-setup-inline-actions {
   display: flex;
@@ -3827,7 +3879,9 @@ a:hover {
   font-weight: 600;
   cursor: pointer;
 }
-.ch-setup-btn-save:hover { filter: brightness(1.12); }
+.ch-setup-btn-save:hover {
+  filter: brightness(1.12);
+}
 
 .ch-setup-btn-cancel {
   background: none;
@@ -3838,7 +3892,10 @@ a:hover {
   font-size: 12px;
   cursor: pointer;
 }
-.ch-setup-btn-cancel:hover { border-color: var(--text-muted); color: var(--text-normal); }
+.ch-setup-btn-cancel:hover {
+  border-color: var(--text-muted);
+  color: var(--text-normal);
+}
 
 .ch-setup-add-bar {
   margin-top: 20px;
@@ -3855,9 +3912,14 @@ a:hover {
   font-size: 13px;
   padding: 6px 14px;
   cursor: pointer;
-  transition: border-color .15s, color .15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 }
-.ch-setup-add-btn:hover { border-color: var(--brand); color: var(--brand); }
+.ch-setup-add-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
 
 .ch-setup-add-form {
   display: flex;
@@ -3960,7 +4022,7 @@ a:hover {
 }
 
 .super-admin-tab.active::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   right: 0;
@@ -4089,7 +4151,7 @@ a:hover {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0,0,0,.54);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.54);
 }
 
 .invite-modal-header {
@@ -4129,7 +4191,9 @@ a:hover {
   flex-shrink: 0;
   margin-top: 2px;
 }
-.invite-modal-close:hover { color: var(--interactive-hover); }
+.invite-modal-close:hover {
+  color: var(--interactive-hover);
+}
 
 .invite-modal-search-wrap {
   display: flex;
@@ -4154,7 +4218,9 @@ a:hover {
   font-size: 14px;
   flex: 1;
 }
-.invite-modal-search::placeholder { color: var(--text-muted); }
+.invite-modal-search::placeholder {
+  color: var(--text-muted);
+}
 
 .invite-modal-user-list {
   flex: 1;
@@ -4179,7 +4245,9 @@ a:hover {
   border-radius: 6px;
   cursor: default;
 }
-.invite-modal-user-row:hover { background: var(--bg-modifier-hover); }
+.invite-modal-user-row:hover {
+  background: var(--bg-modifier-hover);
+}
 
 .invite-modal-avatar {
   width: 36px;
@@ -4215,7 +4283,10 @@ a:hover {
   padding: 5px 14px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background .1s, color .1s, border-color .1s;
+  transition:
+    background 0.1s,
+    color 0.1s,
+    border-color 0.1s;
 }
 .invite-modal-invite-btn:hover:not(:disabled) {
   background: var(--interactive-normal);
@@ -4237,7 +4308,7 @@ a:hover {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--header-secondary);
   margin: 0 0 8px;
 }
@@ -4270,10 +4341,14 @@ a:hover {
   padding: 8px 16px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: filter .1s;
+  transition: filter 0.1s;
 }
-.invite-modal-copy-btn:hover { filter: brightness(1.1); }
-.invite-modal-copy-btn.copied { background: #23a55a; }
+.invite-modal-copy-btn:hover {
+  filter: brightness(1.1);
+}
+.invite-modal-copy-btn.copied {
+  background: #23a55a;
+}
 
 .invite-modal-link-footer {
   font-size: 12px;
@@ -4299,7 +4374,7 @@ a:hover {
   background: var(--bg-primary);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,.54);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.54);
 }
 
 .invite-settings-header {
@@ -4333,7 +4408,7 @@ a:hover {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--header-secondary);
 }
 
@@ -4353,7 +4428,9 @@ a:hover {
   outline: none;
   cursor: pointer;
 }
-.invite-settings-select:focus { border-color: var(--brand); }
+.invite-settings-select:focus {
+  border-color: var(--brand);
+}
 
 .invite-settings-select-chevron {
   position: absolute;
@@ -4396,7 +4473,7 @@ a:hover {
   background: var(--bg-tertiary);
   flex-shrink: 0;
   border: 2px solid var(--border-subtle);
-  opacity: .5;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -4663,7 +4740,9 @@ a:hover {
   line-height: 18px;
   min-height: 32px;
   text-align: left;
-  transition: background 0.05s ease-out, color 0.05s ease-out;
+  transition:
+    background 0.05s ease-out,
+    color 0.05s ease-out;
 }
 
 .server-menu-item:hover:not(:disabled) {
@@ -4952,7 +5031,9 @@ a:hover {
   border: none;
   border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: background 0.1s ease-out, color 0.1s ease-out;
+  transition:
+    background 0.1s ease-out,
+    color 0.1s ease-out;
 }
 
 .pinned-unpin-btn:hover {
@@ -5252,12 +5333,14 @@ a:hover {
   box-shadow: var(--elevation-high);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.1s ease-out, transform 0.1s ease-out;
+  transition:
+    opacity 0.1s ease-out,
+    transform 0.1s ease-out;
   z-index: 20;
 }
 
 .reaction-tooltip::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 100%;
   left: 50%;
@@ -5316,7 +5399,7 @@ a:hover {
 
 .slash-autocomplete-name {
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   color: var(--header-primary);
   flex-shrink: 0;
   min-width: 90px;
@@ -5891,7 +5974,9 @@ a:hover {
   max-height: 620px;
   background: var(--bg-secondary);
   border-radius: var(--radius-md);
-  box-shadow: var(--elevation-high), 0 0 0 1px var(--border-subtle);
+  box-shadow:
+    var(--elevation-high),
+    0 0 0 1px var(--border-subtle);
   z-index: 41;
   display: flex;
   flex-direction: column;
@@ -6140,7 +6225,7 @@ a:hover {
   width: 320px;
   background: var(--bg-floating, #18191c);
   border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.54);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.54);
   z-index: 900;
   overflow: hidden;
 }
@@ -6153,7 +6238,7 @@ a:hover {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
 }
 
@@ -6166,7 +6251,9 @@ a:hover {
   display: flex;
   align-items: center;
 }
-.notif-panel-close:hover { color: var(--interactive-hover); }
+.notif-panel-close:hover {
+  color: var(--interactive-hover);
+}
 
 .notif-panel-empty {
   padding: 12px 16px 16px;
@@ -6179,7 +6266,7 @@ a:hover {
   display: flex;
   gap: 12px;
   padding: 10px 16px;
-  border-top: 1px solid var(--bg-modifier-accent, rgba(255,255,255,.06));
+  border-top: 1px solid var(--bg-modifier-accent, rgba(255, 255, 255, 0.06));
 }
 
 .notif-icon {
@@ -6224,13 +6311,17 @@ a:hover {
   background: #23a55a;
   color: #fff;
 }
-.notif-btn-join:hover { background: #1e9050; }
+.notif-btn-join:hover {
+  background: #1e9050;
+}
 
 .notif-btn-dismiss {
-  background: var(--bg-modifier-accent, rgba(255,255,255,.1));
+  background: var(--bg-modifier-accent, rgba(255, 255, 255, 0.1));
   color: var(--text-normal);
 }
-.notif-btn-dismiss:hover { background: var(--bg-modifier-hover, rgba(255,255,255,.16)); }
+.notif-btn-dismiss:hover {
+  background: var(--bg-modifier-hover, rgba(255, 255, 255, 0.16));
+}
 
 /* ── Super Admin Mode banner ────────────────────────────────── */
 /*
@@ -6266,8 +6357,13 @@ a:hover {
   animation: sa-dot-pulse 1.8s ease-in-out infinite;
 }
 @keyframes sa-dot-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.65); }
-  50%      { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);   }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.65);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+  }
 }
 .sa-banner-text {
   flex: 1 1 auto;
@@ -6302,9 +6398,16 @@ a:hover {
   transition: background 0.15s ease;
   line-height: 1.4;
 }
-.sa-banner-exit:hover  { background: rgba(255, 255, 255, 0.30); }
-.sa-banner-exit:active { background: rgba(255, 255, 255, 0.38); }
-.sa-banner-exit:disabled { opacity: 0.5; cursor: not-allowed; }
+.sa-banner-exit:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+.sa-banner-exit:active {
+  background: rgba(255, 255, 255, 0.38);
+}
+.sa-banner-exit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .sa-banner-confirm {
   display: flex;
@@ -6323,8 +6426,12 @@ a:hover {
   background: rgba(0, 0, 0, 0.28);
   border-color: rgba(255, 255, 255, 0.75);
 }
-.sa-banner-danger:hover  { background: rgba(0, 0, 0, 0.44); }
-.sa-banner-danger:active { background: rgba(0, 0, 0, 0.55); }
+.sa-banner-danger:hover {
+  background: rgba(0, 0, 0, 0.44);
+}
+.sa-banner-danger:active {
+  background: rgba(0, 0, 0, 0.55);
+}
 
 /* ── Server Settings → AI Assistant section ─────────────────── */
 
@@ -6335,7 +6442,7 @@ a:hover {
   padding: 0 4px;
   border-radius: var(--radius-xs);
   font-size: 90%;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
 .ai-perm-notice {
@@ -6351,8 +6458,13 @@ a:hover {
   font-size: 14px;
   line-height: 1.45;
 }
-.ai-perm-notice svg { flex-shrink: 0; }
-.ai-perm-notice strong { color: var(--yellow-300); filter: brightness(1.25); }
+.ai-perm-notice svg {
+  flex-shrink: 0;
+}
+.ai-perm-notice strong {
+  color: var(--yellow-300);
+  filter: brightness(1.25);
+}
 
 .ai-group {
   background: var(--bg-secondary-alt);
@@ -6395,13 +6507,19 @@ a:hover {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   transition: background 0.12s ease;
 }
-.ai-toggle-row:first-of-type { border-top: none; }
-.ai-toggle-row:hover { background: rgba(255, 255, 255, 0.025); }
+.ai-toggle-row:first-of-type {
+  border-top: none;
+}
+.ai-toggle-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
 .ai-toggle-row-disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
-.ai-toggle-row-disabled:hover { background: transparent; }
+.ai-toggle-row-disabled:hover {
+  background: transparent;
+}
 .ai-toggle-row-text {
   flex: 1;
   min-width: 0;
@@ -6452,18 +6570,22 @@ a:hover {
   cursor: pointer;
   margin: 0;
 }
-.ai-switch.disabled input { cursor: not-allowed; }
+.ai-switch.disabled input {
+  cursor: not-allowed;
+}
 .ai-switch-track {
   position: absolute;
   inset: 0;
-  border-radius: 9999px;              /* explicit pill */
+  border-radius: 9999px; /* explicit pill */
   background: #80848e;
   transition: background 0.18s ease;
 }
 .ai-switch.on .ai-switch-track {
   background: var(--green-360);
 }
-.ai-switch.disabled .ai-switch-track { opacity: 0.6; }
+.ai-switch.disabled .ai-switch-track {
+  opacity: 0.6;
+}
 .ai-switch-thumb {
   position: absolute;
   top: 3px;
@@ -6504,7 +6626,9 @@ a:hover {
   font-variant-numeric: tabular-nums;
   color: var(--text-normal);
 }
-.ai-budget-warn { color: var(--yellow-300); }
+.ai-budget-warn {
+  color: var(--yellow-300);
+}
 .ai-budget-bar {
   height: 6px;
   background: rgba(255, 255, 255, 0.08);
@@ -6519,7 +6643,9 @@ a:hover {
      handles rounding and an explicit radius here clipped visually at
      low fill percentages. */
 }
-.ai-budget-bar-warn { background: var(--yellow-300); }
+.ai-budget-bar-warn {
+  background: var(--yellow-300);
+}
 
 /* Transient saved confirmation that appears after a successful save */
 .ai-saved-toast {
@@ -6534,14 +6660,28 @@ a:hover {
   animation: ai-toast-fade 2.5s ease forwards;
 }
 @keyframes ai-toast-fade {
-  0%   { opacity: 0; transform: translateY(-4px); }
-  10%  { opacity: 1; transform: translateY(0);    }
-  85%  { opacity: 1; transform: translateY(0);    }
-  100% { opacity: 0; transform: translateY(-4px); }
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 /* Push the app down so the banner doesn't overlap the chat. */
-.app.sa-active { height: calc(100vh - 42px); }
+.app.sa-active {
+  height: calc(100vh - 42px);
+}
 
 /* ── Developer Access modal ─────────────────────────────────── */
 /*
@@ -6552,9 +6692,9 @@ a:hover {
  */
 .dev-admin-modal {
   position: relative;
-  width: 440px;                           /* match .invite-modal / Discord canon */
+  width: 440px; /* match .invite-modal / Discord canon */
   max-width: 95vw;
-  max-height: 85vh;                       /* scroll long error content instead of overflowing */
+  max-height: 85vh; /* scroll long error content instead of overflowing */
   background: var(--bg-primary);
   border-radius: var(--radius-md);
   overflow: hidden auto;
@@ -6595,7 +6735,7 @@ a:hover {
   padding: 1px 6px;
   border-radius: var(--radius-xs);
   font-size: 12px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   color: var(--text-normal);
 }
 .dev-admin-close {
@@ -6643,7 +6783,7 @@ a:hover {
   border-radius: var(--radius-sm);
   padding: 11px 14px;
   font-size: 14px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   letter-spacing: 0.02em;
   text-transform: none;
   font-weight: 400;
@@ -6671,9 +6811,16 @@ a:hover {
   transition: background 0.12s ease;
   font-family: inherit;
 }
-.dev-admin-submit:hover:not(:disabled)  { background: var(--brand-blurple-560); }
-.dev-admin-submit:active:not(:disabled) { background: var(--brand-blurple-600); }
-.dev-admin-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.dev-admin-submit:hover:not(:disabled) {
+  background: var(--brand-blurple-560);
+}
+.dev-admin-submit:active:not(:disabled) {
+  background: var(--brand-blurple-600);
+}
+.dev-admin-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .dev-admin-submit-secondary {
   background: var(--bg-modifier-hover);

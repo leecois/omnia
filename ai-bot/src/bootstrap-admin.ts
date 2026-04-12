@@ -21,13 +21,11 @@ async function main(): Promise<void> {
 
   // Subscribe to user + super_admin so we can see live inserts.
   await new Promise<void>((resolve, reject) => {
-    conn.subscriptionBuilder()
+    conn
+      .subscriptionBuilder()
       .onApplied(() => resolve())
       .onError(ctx => reject(ctx.event ?? new Error('sub error')))
-      .subscribe([
-        'SELECT * FROM "user"',
-        'SELECT * FROM super_admin',
-      ]);
+      .subscribe(['SELECT * FROM "user"', 'SELECT * FROM super_admin']);
   });
 
   // Helper: already-super? (avoid double-grant).
@@ -68,7 +66,7 @@ async function main(): Promise<void> {
 
   // 2. Otherwise, wait for the next non-bot user to connect.
   console.log('[bootstrap] waiting for a human user to connect…');
-  console.log('[bootstrap] open https://omnia.example.com or run the dev server now');
+  console.log('[bootstrap] open the frontend URL in your browser (or run: bun run dev)');
   conn.db.user.onInsert(async (_ctx, u) => {
     const hex = u.identity.toHexString();
     if (await grantIfEligible(hex, u.identity)) {
@@ -80,4 +78,7 @@ async function main(): Promise<void> {
   await new Promise<void>(() => {});
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

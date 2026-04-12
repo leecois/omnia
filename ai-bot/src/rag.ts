@@ -15,9 +15,9 @@
 
 import type { DbConnection } from '../../src/module_bindings/index.ts';
 import type { AskRequest, Message } from '../../src/module_bindings/types.ts';
+import type { BotConfig } from './config.ts';
 import type { LLMAdapter } from './llm.ts';
 import type { QdrantStore } from './qdrant.ts';
-import type { BotConfig } from './config.ts';
 
 const SYSTEM_PROMPT = `You are Omnia, a helpful documentation assistant for a chat platform.
 You answer questions grounded in the provided context snippets from the community.
@@ -36,7 +36,7 @@ export class RAGHandler {
     private conn: DbConnection,
     private qdrant: QdrantStore,
     private llm: LLMAdapter,
-    private cfg: BotConfig,
+    private cfg: BotConfig
   ) {}
 
   /** Scan existing pending rows on startup, then watch for new inserts. */
@@ -79,7 +79,9 @@ export class RAGHandler {
   }
 
   private async handle(req: AskRequest): Promise<void> {
-    console.log(`[rag] handling request #${req.id} in channel ${req.channelId}: "${req.question.slice(0, 60)}…"`);
+    console.log(
+      `[rag] handling request #${req.id} in channel ${req.channelId}: "${req.question.slice(0, 60)}…"`
+    );
 
     // Confirm the feature is still enabled at handle time (config can change).
     const cfg = this.conn.db.ai_config.serverId.find(req.serverId);
@@ -112,7 +114,7 @@ export class RAGHandler {
       // No sources — degrade gracefully with a "not found" answer.
       const answerText =
         `I couldn't find anything in the docs that answers **"${req.question}"**. ` +
-        `Try rephrasing or ask a human member of the server.`;
+        'Try rephrasing or ask a human member of the server.';
       await this.postAnswer(req, answerText, 0, 0, 0n);
       return;
     }
@@ -127,18 +129,15 @@ export class RAGHandler {
     // 5. Call the LLM.
     const res = await this.llm.chat(SYSTEM_PROMPT, userPrompt);
 
-    // 6. Append a citations footer.
-    const citations = contexts.map(c => `[${c.rank}] <msg:${c.msg.id}>`).join('  ');
+    // 6. Append a citations footer with deep-links to each source message.
+    // Path format: /c/:serverId/:channelId/:messageId (matches useRoute.ts)
+    const citations = contexts
+      .map(c => `[[${c.rank}]](/c/${req.serverId}/${c.msg.channelId}/${c.msg.id})`)
+      .join('  ');
     const answerText = `${res.text}\n\n_Sources: ${citations}_`;
 
     // 7. Post the answer and resolve.
-    await this.postAnswer(
-      req,
-      answerText,
-      res.inputTokens,
-      res.outputTokens,
-      res.costMicros,
-    );
+    await this.postAnswer(req, answerText, res.inputTokens, res.outputTokens, res.costMicros);
   }
 
   private async postAnswer(
@@ -146,7 +145,7 @@ export class RAGHandler {
     answerText: string,
     inputTokens: number,
     outputTokens: number,
-    costMicros: bigint,
+    costMicros: bigint
   ): Promise<void> {
     // Call sendMessage reducer. Single-object argument per SpacetimeDB SDK v2.
     // MUST be awaited — reducer calls return Promise<void> and reject if the
@@ -176,7 +175,7 @@ export class RAGHandler {
 
     console.log(
       `[rag] resolved request #${req.id} — ${inputTokens}+${outputTokens} tokens, ` +
-      `$${(Number(costMicros) / 1_000_000).toFixed(4)}`,
+        `$${(Number(costMicros) / 1_000_000).toFixed(4)}`
     );
   }
 }

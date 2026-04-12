@@ -1,17 +1,17 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
-import { generateAlias } from '../utils/alias';
-import { useRoute, buildMessageLink } from '../hooks/useRoute';
-import { useTable, useReducer } from 'spacetimedb/react';
-import { tables, reducers } from '../module_bindings';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useReducer, useTable } from 'spacetimedb/react';
+import { buildMessageLink, useRoute } from '../hooks/useRoute';
+import { reducers, tables } from '../module_bindings';
 import type {
   Channel,
   Message as MessageRow,
-  Thread,
-  User,
   Reaction,
-  Typing,
   ServerMember,
+  Thread,
+  Typing,
+  User,
 } from '../module_bindings/types';
+import { generateAlias } from '../utils/alias';
 import MessageText from './MessageText';
 
 const REACTION_EMOJIS = ['👍', '👎', '❤️', '🎉', '😂', '😮', '😢', '😡'];
@@ -178,9 +178,7 @@ export default function Chat({
   }, [flashMessageId]);
 
   const jumpToMessage = (msgId: bigint) => {
-    const el = document.querySelector(
-      `[data-message-id="${msgId.toString()}"]`
-    );
+    const el = document.querySelector(`[data-message-id="${msgId.toString()}"]`);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setFlashMessageId(msgId);
@@ -207,33 +205,25 @@ export default function Chat({
 
   const topMessages = allChannelMessages
     .filter(m => m.threadId === 0n)
-    .sort((a, b) =>
-      a.sent.microsSinceUnixEpoch < b.sent.microsSinceUnixEpoch ? -1 : 1
-    );
+    .sort((a, b) => (a.sent.microsSinceUnixEpoch < b.sent.microsSinceUnixEpoch ? -1 : 1));
 
   const pinnedMessages = allChannelMessages
     .filter(m => m.pinned && m.threadId === 0n)
-    .sort((a, b) =>
-      a.sent.microsSinceUnixEpoch < b.sent.microsSinceUnixEpoch ? 1 : -1
-    );
+    .sort((a, b) => (a.sent.microsSinceUnixEpoch < b.sent.microsSinceUnixEpoch ? 1 : -1));
 
   const channelThreads = threads.filter(th => th.channelId === channel.id);
   const activeThread =
-    activeThreadId !== null
-      ? channelThreads.find(th => th.id === activeThreadId) ?? null
-      : null;
+    activeThreadId !== null ? (channelThreads.find(th => th.id === activeThreadId) ?? null) : null;
   const activeThreadParent =
     activeThread !== null
-      ? allChannelMessages.find(m => m.id === activeThread.parentMessageId) ?? null
+      ? (allChannelMessages.find(m => m.id === activeThread.parentMessageId) ?? null)
       : null;
 
   // Mark channel as read when latest message changes
   const latestMsgId = topMessages.length > 0 ? topMessages[topMessages.length - 1].id : undefined;
   useEffect(() => {
     if (latestMsgId !== undefined) {
-      updateReadState({ channelId: channel.id, lastMessageId: latestMsgId }).catch(
-        () => {}
-      );
+      updateReadState({ channelId: channel.id, lastMessageId: latestMsgId }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id, latestMsgId?.toString()]);
@@ -305,8 +295,8 @@ export default function Chat({
                 alert('Invalid slowmode value');
                 return;
               }
-              setSlowmode({ channelId: channel.id, seconds: Math.floor(n) }).catch(
-                err => alert(String(err))
+              setSlowmode({ channelId: channel.id, seconds: Math.floor(n) }).catch(err =>
+                alert(String(err))
               );
             }}
           >
@@ -329,8 +319,9 @@ export default function Chat({
                   alert('Invalid slowmode value');
                   return;
                 }
-                setSlowmode({ channelId: channel.id, seconds: Math.floor(n) })
-                  .catch(err => alert(String(err)));
+                setSlowmode({ channelId: channel.id, seconds: Math.floor(n) }).catch(err =>
+                  alert(String(err))
+                );
               }}
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
@@ -385,9 +376,7 @@ export default function Chat({
                 }}
                 onUnpin={(msg, shiftHeld) => {
                   if (shiftHeld) {
-                    unpinMessageFromPanel({ messageId: msg.id }).catch(
-                      console.error
-                    );
+                    unpinMessageFromPanel({ messageId: msg.id }).catch(console.error);
                   } else {
                     setConfirmUnpin(msg);
                   }
@@ -475,7 +464,6 @@ export default function Chat({
       </header>
 
       <main className="chat-main">
-
         <ChannelPane
           channel={channel}
           messages={topMessages}
@@ -513,14 +501,10 @@ export default function Chat({
       {confirmUnpin && (
         <UnpinConfirmModal
           message={confirmUnpin}
-          author={
-            userByHex.get(confirmUnpin.authorId.toHexString()) ?? null
-          }
+          author={userByHex.get(confirmUnpin.authorId.toHexString()) ?? null}
           onCancel={() => setConfirmUnpin(null)}
           onConfirm={() => {
-            unpinMessageFromPanel({ messageId: confirmUnpin.id }).catch(
-              console.error
-            );
+            unpinMessageFromPanel({ messageId: confirmUnpin.id }).catch(console.error);
             setConfirmUnpin(null);
           }}
         />
@@ -590,7 +574,10 @@ function ChannelPane({
   const unpinMessage = useReducer(reducers.unpinMessage);
   const createAskRequest = useReducer(reducers.createAskRequest);
 
-  useEffect(() => { setDraft(''); setReplyTo(null); }, [channel.id]);
+  useEffect(() => {
+    setDraft('');
+    setReplyTo(null);
+  }, [channel.id]);
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -652,7 +639,7 @@ function ChannelPane({
         // Parse "wait Ns" from slowmode error and start cooldown
         const msg = String(err?.message ?? err);
         const m = msg.match(/wait (\d+)s/);
-        if (m) setCooldownUntil(Date.now() + parseInt(m[1], 10) * 1000);
+        if (m) setCooldownUntil(Date.now() + Number.parseInt(m[1], 10) * 1000);
       });
   };
 
@@ -692,15 +679,13 @@ function ChannelPane({
           flashMessageId={flashMessageId}
           onJumpToMessage={onJumpToMessage}
           onReply={setReplyTo}
-          onEdit={(msgId, text) =>
-            editMessage({ messageId: msgId, text }).catch(console.error)
-          }
+          onEdit={(msgId, text) => editMessage({ messageId: msgId, text }).catch(console.error)}
           onDelete={msgId => {
             if (confirm('Delete this message?')) {
               deleteMessage({ messageId: msgId }).catch(console.error);
             }
           }}
-          onStartThread={(msg) => {
+          onStartThread={msg => {
             const name = prompt('Thread name?', msg.text.slice(0, 40));
             if (!name) return;
             createThread({ parentMessageId: msg.id, name })
@@ -708,10 +693,9 @@ function ChannelPane({
               .catch(console.error);
           }}
           onTogglePin={msg =>
-            (msg.pinned ? unpinMessage : pinMessage)({ messageId: msg.id })
-              .catch(console.error)
+            (msg.pinned ? unpinMessage : pinMessage)({ messageId: msg.id }).catch(console.error)
           }
-          onOpenThread={(msg) => {
+          onOpenThread={msg => {
             const th = threadsByParent.get(msg.id.toString());
             if (th) onOpenThread(th.id);
           }}
@@ -724,7 +708,11 @@ function ChannelPane({
 
       {typingNames.length > 0 && (
         <div className="typing-indicator">
-          <span className="typing-dots"><span /><span /><span /></span>
+          <span className="typing-dots">
+            <span />
+            <span />
+            <span />
+          </span>
           {typingNames.join(', ')} {typingNames.length === 1 ? 'is' : 'are'} typing…
         </div>
       )}
@@ -734,8 +722,7 @@ function ChannelPane({
       {replyTo && (
         <div className="reply-banner">
           <span>
-            Replying to{' '}
-            <b>{userByHex.get(replyTo.authorId.toHexString())?.name ?? 'someone'}</b>
+            Replying to <b>{userByHex.get(replyTo.authorId.toHexString())?.name ?? 'someone'}</b>
             {' — '}
             <span className="reply-quote-preview">{replyTo.text.slice(0, 100)}</span>
           </span>
@@ -769,70 +756,83 @@ function ChannelPane({
           You do not have permission to send messages in this channel.
         </div>
       ) : (
-      <>
-      {/* Slash command suggestions + active-command pill */}
-      <SlashHints
-        draft={draft}
-        error={slashError}
-        onPick={cmd => { setDraft(`/${cmd} `); setSlashError(null); }}
-      />
-      <form className="message-input" onSubmit={onSend}>
-        <button
-          type="button"
-          className="message-input-attach"
-          title="Attach a URL"
-          disabled={!canWrite}
-          onClick={() => {
-            if (!canWrite) return;
-            const url = window.prompt('Attachment URL:', attachmentUrl);
-            if (url !== null) setAttachmentUrl(url);
-          }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2.00098C6.486 2.00098 2 6.48698 2 12.001C2 17.515 6.486 22.001 12 22.001C17.514 22.001 22 17.515 22 12.001C22 6.48698 17.514 2.00098 12 2.00098ZM17 13.001H13V17.001H11V13.001H7V11.001H11V7.00098H13V11.001H17V13.001Z" />
-          </svg>
-        </button>
+        <>
+          {/* Slash command suggestions + active-command pill */}
+          <SlashHints
+            draft={draft}
+            error={slashError}
+            onPick={cmd => {
+              setDraft(`/${cmd} `);
+              setSlashError(null);
+            }}
+          />
+          <form className="message-input" onSubmit={onSend}>
+            <button
+              type="button"
+              className="message-input-attach"
+              title="Attach a URL"
+              disabled={!canWrite}
+              onClick={() => {
+                if (!canWrite) return;
+                const url = window.prompt('Attachment URL:', attachmentUrl);
+                if (url !== null) setAttachmentUrl(url);
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.00098C6.486 2.00098 2 6.48698 2 12.001C2 17.515 6.486 22.001 12 22.001C17.514 22.001 22 17.515 22 12.001C22 6.48698 17.514 2.00098 12 2.00098ZM17 13.001H13V17.001H11V13.001H7V11.001H11V7.00098H13V11.001H17V13.001Z" />
+              </svg>
+            </button>
 
-        <SlashHighlightInput
-          draft={draft}
-          onChange={onDraftChange}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              onSend(e as unknown as React.FormEvent);
-            }
-          }}
-          placeholder={
-            !canWrite
-              ? `You don't have write access to #${channel.name}`
-              : cooldownRemaining > 0
-              ? `Slowmode — wait ${cooldownRemaining}s`
-              : channel.slowmodeSeconds > 0
-                ? `Message #${channel.name} (slowmode: ${channel.slowmodeSeconds}s)`
-                : `Message #${channel.name}`
-          }
-          disabled={cooldownRemaining > 0 || !canWrite}
-        />
+            <SlashHighlightInput
+              draft={draft}
+              onChange={onDraftChange}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  onSend(e as unknown as React.FormEvent);
+                }
+              }}
+              placeholder={
+                !canWrite
+                  ? `You don't have write access to #${channel.name}`
+                  : cooldownRemaining > 0
+                    ? `Slowmode — wait ${cooldownRemaining}s`
+                    : channel.slowmodeSeconds > 0
+                      ? `Message #${channel.name} (slowmode: ${channel.slowmodeSeconds}s)`
+                      : `Message #${channel.name}`
+              }
+              disabled={cooldownRemaining > 0 || !canWrite}
+            />
 
-        <div className="message-input-tools">
-          <button type="button" className="message-input-tool" title="Send a gift" disabled={!canWrite}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20 7H16.62C16.86 6.56 17 6.05 17 5.5C17 3.57 15.43 2 13.5 2C12.28 2 11.21 2.63 10.59 3.58L10 4.38L9.41 3.57C8.79 2.63 7.72 2 6.5 2C4.57 2 3 3.57 3 5.5C3 6.05 3.14 6.56 3.38 7H0V20C0 21.1 0.9 22 2 22H18C19.1 22 20 21.1 20 20V7ZM13.5 4C14.33 4 15 4.67 15 5.5C15 6.33 14.33 7 13.5 7C12.67 7 12 6.33 12 5.5C12 4.67 12.67 4 13.5 4ZM6.5 4C7.33 4 8 4.67 8 5.5C8 6.33 7.33 7 6.5 7C5.67 7 5 6.33 5 5.5C5 4.67 5.67 4 6.5 4ZM18 20H2V16H7.08L4.15 11.98L5.77 10.8L9 15.23L10 13.85L11 15.23L14.23 10.8L15.85 11.98L12.92 16H18V20ZM18 14H14.08L16.85 10.2L15.23 9.02L12 13.45L10.2 10.98L9.01 12.62L7.92 14H2V9H18V14Z" />
-            </svg>
-          </button>
-          <button type="button" className="message-input-tool" title="GIF" disabled={!canWrite}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M2.5 3C1.672 3 1 3.672 1 4.5V19.5C1 20.328 1.672 21 2.5 21H21.5C22.328 21 23 20.328 23 19.5V4.5C23 3.672 22.328 3 21.5 3H2.5ZM8 10V13H9V14H6V9H9V10H8ZM11 9H12V14H11V9ZM14 9V14H15V12H17V11H15V10H18V9H14Z" />
-            </svg>
-          </button>
-          <button type="button" className="message-input-tool" title="Emoji" disabled={!canWrite}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.486 2 2 6.486 2 12C2 17.514 6.486 22 12 22C17.514 22 22 17.514 22 12C22 6.486 17.514 2 12 2ZM8.5 8C9.328 8 10 8.672 10 9.5C10 10.328 9.328 11 8.5 11C7.672 11 7 10.328 7 9.5C7 8.672 7.672 8 8.5 8ZM15.5 8C16.328 8 17 8.672 17 9.5C17 10.328 16.328 11 15.5 11C14.672 11 14 10.328 14 9.5C14 8.672 14.672 8 15.5 8ZM12 18C9.636 18 7.604 16.585 6.646 14.577L7.551 14.123C8.361 15.817 10.024 17 12 17C13.976 17 15.639 15.817 16.449 14.123L17.354 14.577C16.396 16.585 14.364 18 12 18Z" />
-            </svg>
-          </button>
-        </div>
-      </form>
-      </>
+            <div className="message-input-tools">
+              <button
+                type="button"
+                className="message-input-tool"
+                title="Send a gift"
+                disabled={!canWrite}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 7H16.62C16.86 6.56 17 6.05 17 5.5C17 3.57 15.43 2 13.5 2C12.28 2 11.21 2.63 10.59 3.58L10 4.38L9.41 3.57C8.79 2.63 7.72 2 6.5 2C4.57 2 3 3.57 3 5.5C3 6.05 3.14 6.56 3.38 7H0V20C0 21.1 0.9 22 2 22H18C19.1 22 20 21.1 20 20V7ZM13.5 4C14.33 4 15 4.67 15 5.5C15 6.33 14.33 7 13.5 7C12.67 7 12 6.33 12 5.5C12 4.67 12.67 4 13.5 4ZM6.5 4C7.33 4 8 4.67 8 5.5C8 6.33 7.33 7 6.5 7C5.67 7 5 6.33 5 5.5C5 4.67 5.67 4 6.5 4ZM18 20H2V16H7.08L4.15 11.98L5.77 10.8L9 15.23L10 13.85L11 15.23L14.23 10.8L15.85 11.98L12.92 16H18V20ZM18 14H14.08L16.85 10.2L15.23 9.02L12 13.45L10.2 10.98L9.01 12.62L7.92 14H2V9H18V14Z" />
+                </svg>
+              </button>
+              <button type="button" className="message-input-tool" title="GIF" disabled={!canWrite}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.5 3C1.672 3 1 3.672 1 4.5V19.5C1 20.328 1.672 21 2.5 21H21.5C22.328 21 23 20.328 23 19.5V4.5C23 3.672 22.328 3 21.5 3H2.5ZM8 10V13H9V14H6V9H9V10H8ZM11 9H12V14H11V9ZM14 9V14H15V12H17V11H15V10H18V9H14Z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="message-input-tool"
+                title="Emoji"
+                disabled={!canWrite}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.486 2 2 6.486 2 12C2 17.514 6.486 22 12 22C17.514 22 22 17.514 22 12C22 6.486 17.514 2 12 2ZM8.5 8C9.328 8 10 8.672 10 9.5C10 10.328 9.328 11 8.5 11C7.672 11 7 10.328 7 9.5C7 8.672 7.672 8 8.5 8ZM15.5 8C16.328 8 17 8.672 17 9.5C17 10.328 16.328 11 15.5 11C14.672 11 14 10.328 14 9.5C14 8.672 14.672 8 15.5 8ZM12 18C9.636 18 7.604 16.585 6.646 14.577L7.551 14.123C8.361 15.817 10.024 17 12 17C13.976 17 15.639 15.817 16.449 14.123L17.354 14.577C16.396 16.585 14.364 18 12 18Z" />
+                </svg>
+              </button>
+            </div>
+          </form>
+        </>
       )}
     </div>
   );
@@ -864,7 +864,8 @@ function SlashHints({
   if (!draft.startsWith('/')) return error ? <div className="slash-error">{error}</div> : null;
 
   const spaceIdx = draft.indexOf(' ');
-  const cmdPart = spaceIdx === -1 ? draft.slice(1).toLowerCase() : draft.slice(1, spaceIdx).toLowerCase();
+  const cmdPart =
+    spaceIdx === -1 ? draft.slice(1).toLowerCase() : draft.slice(1, spaceIdx).toLowerCase();
   const hasArg = spaceIdx !== -1;
   const exactMatch = SLASH_COMMANDS.find(c => c.name === cmdPart);
 
@@ -880,7 +881,10 @@ function SlashHints({
               key={c.name}
               type="button"
               className={`slash-popup-item ${c.name === cmdPart ? 'slash-popup-item-active' : ''}`}
-              onMouseDown={e => { e.preventDefault(); onPick(c.name); }}
+              onMouseDown={e => {
+                e.preventDefault();
+                onPick(c.name);
+              }}
             >
               <span className="slash-popup-name">/{c.name}</span>
               <span className="slash-popup-desc">{c.description}</span>
@@ -1032,8 +1036,12 @@ function ThreadPanel({
 
     const text = draft;
     setDraft('');
-    sendMessage({ channelId, threadId: thread.id, replyToId: 0n, text, attachmentUrl: '' })
-      .catch(err => { console.error(err); setDraft(text); });
+    sendMessage({ channelId, threadId: thread.id, replyToId: 0n, text, attachmentUrl: '' }).catch(
+      err => {
+        console.error(err);
+        setDraft(text);
+      }
+    );
   };
 
   return (
@@ -1043,7 +1051,9 @@ function ThreadPanel({
           <div className="thread-title">{thread.name}</div>
           <div className="thread-subtitle">Thread</div>
         </div>
-        <button className="icon-btn" onClick={onClose}>×</button>
+        <button className="icon-btn" onClick={onClose}>
+          ×
+        </button>
       </header>
       <div className="messages-scroll" ref={scrollRef}>
         {parentMessage && (
@@ -1059,9 +1069,7 @@ function ThreadPanel({
               channelServerId={serverId}
               compact
               onOpenProfile={onOpenProfile}
-              onEdit={(msgId, text) =>
-                editMessage({ messageId: msgId, text }).catch(console.error)
-              }
+              onEdit={(msgId, text) => editMessage({ messageId: msgId, text }).catch(console.error)}
               onDelete={msgId => {
                 if (confirm('Delete?')) deleteMessage({ messageId: msgId }).catch(console.error);
               }}
@@ -1070,7 +1078,9 @@ function ThreadPanel({
               }
             />
             <div className="thread-divider">
-              <span>{sorted.length} {sorted.length === 1 ? 'reply' : 'replies'}</span>
+              <span>
+                {sorted.length} {sorted.length === 1 ? 'reply' : 'replies'}
+              </span>
             </div>
           </div>
         )}
@@ -1085,9 +1095,7 @@ function ThreadPanel({
           channelServerId={serverId}
           compact
           onOpenProfile={onOpenProfile}
-          onEdit={(msgId, text) =>
-            editMessage({ messageId: msgId, text }).catch(console.error)
-          }
+          onEdit={(msgId, text) => editMessage({ messageId: msgId, text }).catch(console.error)}
           onDelete={msgId => {
             if (confirm('Delete?')) deleteMessage({ messageId: msgId }).catch(console.error);
           }}
@@ -1097,11 +1105,7 @@ function ThreadPanel({
         />
       </div>
       <form className="message-input" onSubmit={onSend}>
-        <button
-          type="button"
-          className="message-input-attach"
-          title="Attach a URL"
-        >
+        <button type="button" className="message-input-attach" title="Attach a URL">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2.00098C6.486 2.00098 2 6.48698 2 12.001C2 17.515 6.486 22.001 12 22.001C17.514 22.001 22 17.515 22 12.001C22 6.48698 17.514 2.00098 12 2.00098ZM17 13.001H13V17.001H11V13.001H7V11.001H11V7.00098H13V11.001H17V13.001Z" />
           </svg>
@@ -1196,13 +1200,9 @@ function MessageList({
   void users; // used via userByHex
 
   const [menuMsgId, setMenuMsgId] = useState<bigint | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(
-    null
-  );
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [pickerMsgId, setPickerMsgId] = useState<bigint | null>(null);
-  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(
-    null
-  );
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null);
   const [editingId, setEditingId] = useState<bigint | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
@@ -1276,10 +1276,7 @@ function MessageList({
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const menuWidth = 224;
-    const left = Math.max(
-      8,
-      Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)
-    );
+    const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
     // Tentatively anchor below the trigger; useLayoutEffect will flip up if needed
     setMenuPos({ top: rect.bottom + 4, left });
     setMenuMsgId(msgId);
@@ -1315,8 +1312,7 @@ function MessageList({
         const sameAuthor = prev && prev.authorId.toHexString() === msg.authorId.toHexString();
         const closeInTime =
           prev &&
-          msg.sent.microsSinceUnixEpoch - prev.sent.microsSinceUnixEpoch <
-            GROUP_WINDOW_MICROS;
+          msg.sent.microsSinceUnixEpoch - prev.sent.microsSinceUnixEpoch < GROUP_WINDOW_MICROS;
         // Never group replies — they must always show their own avatar so the
         // reply indicator L-shape can connect to it.
         const isReply = msg.replyToId !== 0n;
@@ -1325,43 +1321,37 @@ function MessageList({
         const authorHex = msg.authorId.toHexString();
         const author = userByHex.get(authorHex);
         const displayName =
-          nicknameByHex?.get(authorHex) ||
-          author?.name ||
-          generateAlias(authorHex);
+          nicknameByHex?.get(authorHex) || author?.name || generateAlias(authorHex);
         const color = author?.avatarColor ?? '#5865F2';
         const isMine = authorHex === currentIdentityHex;
 
         const date = new Date(Number(msg.sent.microsSinceUnixEpoch / 1000n));
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const dateStr = date.toLocaleDateString([], {
-          month: 'short', day: 'numeric', year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
         });
 
         // Replied-to parent
         const replyParent =
           msg.replyToId !== 0n
-            ? allChannelMessages.find(m => m.id === msg.replyToId) ?? null
+            ? (allChannelMessages.find(m => m.id === msg.replyToId) ?? null)
             : null;
 
         const msgReactions = reactionsByMessage.get(msg.id.toString()) ?? [];
-        const reactionGroups = new Map<
-          string,
-          { count: number; mine: boolean; users: string[] }
-        >();
+        const reactionGroups = new Map<string, { count: number; mine: boolean; users: string[] }>();
         for (const r of msgReactions) {
-          const entry =
-            reactionGroups.get(r.emoji) ?? {
-              count: 0,
-              mine: false,
-              users: [] as string[],
-            };
+          const entry = reactionGroups.get(r.emoji) ?? {
+            count: 0,
+            mine: false,
+            users: [] as string[],
+          };
           entry.count++;
           const rHex = r.userIdentity.toHexString();
           if (rHex === currentIdentityHex) entry.mine = true;
           const rName =
-            nicknameByHex?.get(rHex) ||
-            userByHex.get(rHex)?.name ||
-            generateAlias(rHex);
+            nicknameByHex?.get(rHex) || userByHex.get(rHex)?.name || generateAlias(rHex);
           entry.users.push(rName);
           reactionGroups.set(r.emoji, entry);
         }
@@ -1369,9 +1359,7 @@ function MessageList({
         const existingThread = threadsByParent?.get(msg.id.toString());
 
         const isFlashing =
-          flashMessageId !== undefined &&
-          flashMessageId !== null &&
-          flashMessageId === msg.id;
+          flashMessageId !== undefined && flashMessageId !== null && flashMessageId === msg.id;
         return (
           <div
             key={msg.id.toString()}
@@ -1405,9 +1393,7 @@ function MessageList({
                 <span
                   className="reply-quote-author"
                   style={{
-                    color:
-                      userByHex.get(replyParent.authorId.toHexString())
-                        ?.avatarColor ?? '#999',
+                    color: userByHex.get(replyParent.authorId.toHexString())?.avatarColor ?? '#999',
                   }}
                 >
                   {nicknameByHex?.get(replyParent.authorId.toHexString()) ??
@@ -1435,9 +1421,13 @@ function MessageList({
                   >
                     {displayName}
                   </span>
-                  <span className="message-timestamp">{dateStr} {timeStr}</span>
+                  <span className="message-timestamp">
+                    {dateStr} {timeStr}
+                  </span>
                   {msg.pinned && (
-                    <span className="pinned-badge" title="Pinned">📌</span>
+                    <span className="pinned-badge" title="Pinned">
+                      📌
+                    </span>
                   )}
                 </div>
               )}
@@ -1461,17 +1451,11 @@ function MessageList({
                   />
                   <div className="message-edit-hint">
                     escape to{' '}
-                    <span
-                      className="message-edit-link"
-                      onClick={() => setEditingId(null)}
-                    >
+                    <span className="message-edit-link" onClick={() => setEditingId(null)}>
                       cancel
                     </span>{' '}
                     • enter to{' '}
-                    <span
-                      className="message-edit-link"
-                      onClick={() => saveEdit(msg.id)}
-                    >
+                    <span className="message-edit-link" onClick={() => saveEdit(msg.id)}>
                       save
                     </span>
                   </div>
@@ -1487,11 +1471,21 @@ function MessageList({
               {msg.attachmentUrl && (
                 <div className="attachment-wrap">
                   {/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(msg.attachmentUrl) ? (
-                    <img className="attachment-img" src={msg.attachmentUrl} alt="attachment"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <img
+                      className="attachment-img"
+                      src={msg.attachmentUrl}
+                      alt="attachment"
+                      onError={e => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
                   ) : (
-                    <a className="attachment-link" href={msg.attachmentUrl}
-                      target="_blank" rel="noreferrer noopener">
+                    <a
+                      className="attachment-link"
+                      href={msg.attachmentUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
                       📎 {msg.attachmentUrl}
                     </a>
                   )}
@@ -1510,22 +1504,20 @@ function MessageList({
               {/* Reactions */}
               {reactionGroups.size > 0 && (
                 <div className="reaction-row">
-                  {[...reactionGroups.entries()].map(
-                    ([emoji, { count, mine, users }]) => {
-                      const tooltip = formatReactionTooltip(users, emoji, mine);
-                      return (
-                        <button
-                          key={emoji}
-                          className={`reaction-pill ${mine ? 'mine' : ''}`}
-                          onClick={() => onToggleReaction?.(msg.id, emoji)}
-                        >
-                          <span className="reaction-pill-emoji">{emoji}</span>
-                          <span className="reaction-pill-count">{count}</span>
-                          <span className="reaction-tooltip">{tooltip}</span>
-                        </button>
-                      );
-                    }
-                  )}
+                  {[...reactionGroups.entries()].map(([emoji, { count, mine, users }]) => {
+                    const tooltip = formatReactionTooltip(users, emoji, mine);
+                    return (
+                      <button
+                        key={emoji}
+                        className={`reaction-pill ${mine ? 'mine' : ''}`}
+                        onClick={() => onToggleReaction?.(msg.id, emoji)}
+                      >
+                        <span className="reaction-pill-emoji">{emoji}</span>
+                        <span className="reaction-pill-count">{count}</span>
+                        <span className="reaction-tooltip">{tooltip}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1557,22 +1549,14 @@ function MessageList({
                   </svg>
                 </button>
                 {isMine && onEdit && (
-                  <button
-                    className="msg-tool-btn"
-                    title="Edit"
-                    onClick={() => beginEdit(msg)}
-                  >
+                  <button className="msg-tool-btn" title="Edit" onClick={() => beginEdit(msg)}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M19.2 5.5l-.7-.7a2 2 0 0 0-2.8 0l-1.8 1.8 3.5 3.5 1.8-1.8a2 2 0 0 0 0-2.8ZM3 17.5V21h3.5l10.1-10.1-3.5-3.5L3 17.5Z" />
                     </svg>
                   </button>
                 )}
                 {onReply && (
-                  <button
-                    className="msg-tool-btn"
-                    title="Reply"
-                    onClick={() => onReply(msg)}
-                  >
+                  <button className="msg-tool-btn" title="Reply" onClick={() => onReply(msg)}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M10 8V4l-8 8 8 8v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11Z" />
                     </svg>
@@ -1628,28 +1612,31 @@ function MessageList({
               }}
             >
               <span>Add Reaction</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M9 6l6 6-6 6" />
               </svg>
             </button>
 
-            {activeMenuMsg.authorId.toHexString() === currentIdentityHex &&
-              onEdit && (
-                <button
-                  className="msg-ctx-item"
-                                    onClick={() => beginEdit(activeMenuMsg)}
-                >
-                  <span>Edit Message</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.2 5.5l-.7-.7a2 2 0 0 0-2.8 0l-1.8 1.8 3.5 3.5 1.8-1.8a2 2 0 0 0 0-2.8ZM3 17.5V21h3.5l10.1-10.1-3.5-3.5L3 17.5Z" />
-                  </svg>
-                </button>
-              )}
+            {activeMenuMsg.authorId.toHexString() === currentIdentityHex && onEdit && (
+              <button className="msg-ctx-item" onClick={() => beginEdit(activeMenuMsg)}>
+                <span>Edit Message</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.2 5.5l-.7-.7a2 2 0 0 0-2.8 0l-1.8 1.8 3.5 3.5 1.8-1.8a2 2 0 0 0 0-2.8ZM3 17.5V21h3.5l10.1-10.1-3.5-3.5L3 17.5Z" />
+                </svg>
+              </button>
+            )}
 
             {onReply && (
               <button
                 className="msg-ctx-item"
-                                onClick={() => {
+                onClick={() => {
                   onReply(activeMenuMsg);
                   closeMenu();
                 }}
@@ -1661,10 +1648,7 @@ function MessageList({
               </button>
             )}
 
-            <button
-              className="msg-ctx-item disabled"
-              disabled
-                          >
+            <button className="msg-ctx-item disabled" disabled>
               <span>Forward</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14 8V4l8 8-8 8v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11Z" />
@@ -1675,7 +1659,7 @@ function MessageList({
               (activeMenuThread ? (
                 <button
                   className="msg-ctx-item"
-                                    onClick={() => {
+                  onClick={() => {
                     onOpenThread?.(activeMenuMsg);
                     closeMenu();
                   }}
@@ -1689,7 +1673,7 @@ function MessageList({
                 onStartThread && (
                   <button
                     className="msg-ctx-item"
-                                        onClick={() => {
+                    onClick={() => {
                       onStartThread(activeMenuMsg);
                       closeMenu();
                     }}
@@ -1706,7 +1690,7 @@ function MessageList({
 
             <button
               className="msg-ctx-item"
-                            onClick={() => {
+              onClick={() => {
                 copyToClipboard(activeMenuMsg.text);
                 closeMenu();
               }}
@@ -1720,7 +1704,7 @@ function MessageList({
             {onTogglePin && activeMenuMsg.threadId === 0n && (
               <button
                 className="msg-ctx-item"
-                                onClick={() => {
+                onClick={() => {
                   onTogglePin(activeMenuMsg);
                   closeMenu();
                 }}
@@ -1732,20 +1716,21 @@ function MessageList({
               </button>
             )}
 
-            <button
-              className="msg-ctx-item disabled"
-              disabled
-                          >
+            <button className="msg-ctx-item disabled" disabled>
               <span>Apps</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M9 6l6 6-6 6" />
               </svg>
             </button>
 
-            <button
-              className="msg-ctx-item disabled"
-              disabled
-                          >
+            <button className="msg-ctx-item disabled" disabled>
               <span>Mark Unread</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4l-8 5-8-5V6l8 5 8-5v2Z" />
@@ -1772,40 +1757,36 @@ function MessageList({
               </svg>
             </button>
 
-            <button
-              className="msg-ctx-item disabled"
-              disabled
-                          >
+            <button className="msg-ctx-item disabled" disabled>
               <span>Speak Message</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3 9v6h4l5 5V4L7 9H3Zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12Z" />
               </svg>
             </button>
 
-            {activeMenuMsg.authorId.toHexString() === currentIdentityHex &&
-              onDelete && (
-                <>
-                  <div className="msg-ctx-divider" />
-                  <button
-                    className="msg-ctx-item danger"
-                                        onClick={() => {
-                      onDelete(activeMenuMsg.id);
-                      closeMenu();
-                    }}
-                  >
-                    <span>Delete Message</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z" />
-                    </svg>
-                  </button>
-                </>
-              )}
+            {activeMenuMsg.authorId.toHexString() === currentIdentityHex && onDelete && (
+              <>
+                <div className="msg-ctx-divider" />
+                <button
+                  className="msg-ctx-item danger"
+                  onClick={() => {
+                    onDelete(activeMenuMsg.id);
+                    closeMenu();
+                  }}
+                >
+                  <span>Delete Message</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z" />
+                  </svg>
+                </button>
+              </>
+            )}
 
             <div className="msg-ctx-divider" />
 
             <button
               className="msg-ctx-item"
-                            onClick={() => {
+              onClick={() => {
                 copyToClipboard(activeMenuMsg.id.toString());
                 closeMenu();
               }}
@@ -1816,7 +1797,6 @@ function MessageList({
               </svg>
             </button>
           </div>
-
         </>
       )}
 
@@ -1899,9 +1879,7 @@ function EmojiPickerPopover({
 
           <div className="emoji-picker-grid-wrap">
             {filtered.length === 0 ? (
-              <div className="emoji-picker-empty">
-                No emoji matching &ldquo;{query}&rdquo;
-              </div>
+              <div className="emoji-picker-empty">No emoji matching &ldquo;{query}&rdquo;</div>
             ) : (
               <>
                 <div className="emoji-picker-category">Frequently Used</div>
@@ -1961,7 +1939,9 @@ function PinnedPanel({
       <div className="pinned-panel" onClick={e => e.stopPropagation()}>
         <header className="pinned-panel-header">
           <span>Pinned Messages</span>
-          <button className="icon-btn" onClick={onClose}>×</button>
+          <button className="icon-btn" onClick={onClose}>
+            ×
+          </button>
         </header>
         <div className="pinned-list">
           {messages.length === 0 ? (
@@ -1971,19 +1951,12 @@ function PinnedPanel({
           ) : (
             messages.map(msg => {
               const author = userByHex.get(msg.authorId.toHexString());
-              const name =
-                author?.name ||
-                generateAlias(msg.authorId.toHexString());
+              const name = author?.name || generateAlias(msg.authorId.toHexString());
               const color = author?.avatarColor ?? '#5865F2';
-              const date = new Date(
-                Number(msg.sent.microsSinceUnixEpoch / 1000n)
-              );
+              const date = new Date(Number(msg.sent.microsSinceUnixEpoch / 1000n));
               return (
                 <div key={msg.id.toString()} className="pinned-item">
-                  <div
-                    className="pinned-avatar"
-                    style={{ backgroundColor: color }}
-                  >
+                  <div className="pinned-avatar" style={{ backgroundColor: color }}>
                     {name[0]?.toUpperCase()}
                   </div>
                   <div className="pinned-body">
@@ -2053,32 +2026,19 @@ function UnpinConfirmModal({
 
   return (
     <div className="modal-backdrop" onMouseDown={onCancel}>
-      <div
-        className="modal unpin-modal"
-        onMouseDown={e => e.stopPropagation()}
-      >
+      <div className="modal unpin-modal" onMouseDown={e => e.stopPropagation()}>
         <div className="unpin-modal-header">
           <h3>Unpin Message</h3>
-          <button
-            type="button"
-            className="unpin-modal-close"
-            onClick={onCancel}
-            aria-label="Close"
-          >
+          <button type="button" className="unpin-modal-close" onClick={onCancel} aria-label="Close">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
             </svg>
           </button>
         </div>
         <div className="unpin-modal-body">
-          <p className="unpin-modal-question">
-            You sure you want to remove this pinned message?
-          </p>
+          <p className="unpin-modal-question">You sure you want to remove this pinned message?</p>
           <div className="unpin-modal-preview">
-            <div
-              className="pinned-avatar"
-              style={{ backgroundColor: color }}
-            >
+            <div className="pinned-avatar" style={{ backgroundColor: color }}>
               {name[0]?.toUpperCase()}
             </div>
             <div className="pinned-body">
@@ -2101,9 +2061,9 @@ function UnpinConfirmModal({
             </div>
           </div>
           <p className="unpin-modal-protip">
-            <span className="unpin-modal-protip-label">PROTIP:</span>{' '}
-            You can hold down <kbd>shift</kbd> when clicking{' '}
-            <b>unpin message</b> to bypass this confirmation entirely.
+            <span className="unpin-modal-protip-label">PROTIP:</span> You can hold down{' '}
+            <kbd>shift</kbd> when clicking <b>unpin message</b> to bypass this confirmation
+            entirely.
           </p>
         </div>
         <div className="modal-actions unpin-modal-actions">
@@ -2173,10 +2133,7 @@ function SearchDropdown({
   // matches include `@name` style mentions; for simplicity we reuse members.
   const mentionMatches: User[] = memberMatches.slice(0, 3);
 
-  const renderMemberRow = (
-    u: User,
-    label: 'from' | 'mentions'
-  ): React.ReactElement => {
+  const renderMemberRow = (u: User, label: 'from' | 'mentions'): React.ReactElement => {
     const hex = u.identity.toHexString();
     const nick = nicknameByHex.get(hex);
     const name = nick || u.name || generateAlias(hex);
@@ -2184,12 +2141,7 @@ function SearchDropdown({
       <button
         key={`${label}-${hex}`}
         className="search-dd-row"
-        onClick={e =>
-          onOpenProfile(
-            u,
-            (e.currentTarget as HTMLElement).getBoundingClientRect()
-          )
-        }
+        onClick={e => onOpenProfile(u, (e.currentTarget as HTMLElement).getBoundingClientRect())}
       >
         <span className="search-dd-prefix">
           {label === 'from' ? (
@@ -2202,19 +2154,13 @@ function SearchDropdown({
             </svg>
           )}
         </span>
-        <span
-          className="search-dd-avatar"
-          style={{ backgroundColor: u.avatarColor }}
-        >
+        <span className="search-dd-avatar" style={{ backgroundColor: u.avatarColor }}>
           {name[0]?.toUpperCase()}
         </span>
         <span className="search-dd-body">
           <span className="search-dd-title">{name}</span>
           <span className="search-dd-sub">
-            {label}:{' '}
-            <span className="search-dd-sub-value">
-              {u.name || hex.slice(0, 8)}
-            </span>
+            {label}: <span className="search-dd-sub-value">{u.name || hex.slice(0, 8)}</span>
           </span>
         </span>
       </button>
@@ -2224,8 +2170,7 @@ function SearchDropdown({
   const renderMessageRow = (msg: MessageRow): React.ReactElement => {
     const hex = msg.authorId.toHexString();
     const author = userByHex.get(hex);
-    const name =
-      nicknameByHex.get(hex) || author?.name || generateAlias(hex);
+    const name = nicknameByHex.get(hex) || author?.name || generateAlias(hex);
     return (
       <button
         key={`msg-${msg.id.toString()}`}
@@ -2238,18 +2183,14 @@ function SearchDropdown({
         <span className="search-dd-body">
           <span className="search-dd-title search-dd-msg-line">
             <span className="search-dd-in">in:</span>{' '}
-            <span className="search-dd-channel-name">
-              💬 {name}:
-            </span>{' '}
-            {highlightQuery(msg.text, q)}
+            <span className="search-dd-channel-name">💬 {name}:</span> {highlightQuery(msg.text, q)}
           </span>
         </span>
       </button>
     );
   };
 
-  const hasResults =
-    memberMatches.length + messageMatches.length + mentionMatches.length > 0;
+  const hasResults = memberMatches.length + messageMatches.length + mentionMatches.length > 0;
 
   return (
     <>
@@ -2303,9 +2244,7 @@ function SearchDropdown({
           </>
         )}
 
-        {!hasResults && (
-          <div className="search-dd-empty">No results for "{query}"</div>
-        )}
+        {!hasResults && <div className="search-dd-empty">No results for "{query}"</div>}
       </div>
     </>
   );
@@ -2323,9 +2262,7 @@ function highlightQuery(text: string, q: string): React.ReactNode {
     <>
       {pre}
       {text.slice(start, idx)}
-      <mark className="search-highlight">
-        {text.slice(idx, idx + q.length)}
-      </mark>
+      <mark className="search-highlight">{text.slice(idx, idx + q.length)}</mark>
       {text.slice(idx + q.length, end)}
       {post}
     </>
@@ -2363,9 +2300,7 @@ function ThreadsPanel({
   const q = query.trim().toLowerCase();
   const filtered = threads
     .filter(t => !q || t.name.toLowerCase().includes(q))
-    .sort((a, b) =>
-      a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1
-    );
+    .sort((a, b) => (a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1));
 
   const threadsIconSvg = (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -2430,30 +2365,21 @@ function ThreadsPanel({
                 nicknameByHex.get(creatorHex) ||
                 userByHex.get(creatorHex)?.name ||
                 generateAlias(creatorHex);
-              const creatorColor =
-                userByHex.get(creatorHex)?.avatarColor ?? '#5865F2';
+              const creatorColor = userByHex.get(creatorHex)?.avatarColor ?? '#5865F2';
               const replyCount = repliesByThread.get(th.id.toString()) ?? 0;
-              const created = new Date(
-                Number(th.createdAt.microsSinceUnixEpoch / 1000n)
-              );
+              const created = new Date(Number(th.createdAt.microsSinceUnixEpoch / 1000n));
               return (
                 <button
                   key={th.id.toString()}
                   className="threads-list-item"
                   onClick={() => onOpenThread(th.id)}
                 >
-                  <div
-                    className="threads-list-avatar"
-                    style={{ backgroundColor: creatorColor }}
-                  >
+                  <div className="threads-list-avatar" style={{ backgroundColor: creatorColor }}>
                     {creatorName[0]?.toUpperCase()}
                   </div>
                   <div className="threads-list-body">
                     <div className="threads-list-head">
-                      <span
-                        className="threads-list-title"
-                        style={{ color: creatorColor }}
-                      >
+                      <span className="threads-list-title" style={{ color: creatorColor }}>
                         {th.name}
                       </span>
                       <span className="threads-list-time">
@@ -2464,9 +2390,7 @@ function ThreadsPanel({
                       </span>
                     </div>
                     {parent && (
-                      <div className="threads-list-parent">
-                        ↳ {parent.text.slice(0, 90)}
-                      </div>
+                      <div className="threads-list-parent">↳ {parent.text.slice(0, 90)}</div>
                     )}
                     <div className="threads-list-meta">
                       {replyCount === 0

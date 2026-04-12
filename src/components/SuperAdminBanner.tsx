@@ -38,14 +38,12 @@ export default function SuperAdminBanner() {
   };
 
   return (
-    <div className="sa-banner" role="banner">
+    <header className="sa-banner">
       <span className="sa-banner-dot" aria-hidden="true" />
       <span className="sa-banner-text">
         <strong>SUPER ADMIN MODE</strong>
         <span className="sa-banner-sub">
-          {error
-            ? `Revoke failed: ${error}`
-            : 'every action is logged to dev_admin_audit'}
+          {error ? `Revoke failed: ${error}` : 'every action is logged to dev_admin_audit'}
         </span>
       </span>
       {confirming ? (
@@ -62,21 +60,20 @@ export default function SuperAdminBanner() {
           <button
             type="button"
             className="sa-banner-exit"
-            onClick={() => { setConfirming(false); setError(null); }}
+            onClick={() => {
+              setConfirming(false);
+              setError(null);
+            }}
             disabled={busy}
           >
             Cancel
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          className="sa-banner-exit"
-          onClick={() => setConfirming(true)}
-        >
+        <button type="button" className="sa-banner-exit" onClick={() => setConfirming(true)}>
           Exit
         </button>
       )}
-    </div>
+    </header>
   );
 }

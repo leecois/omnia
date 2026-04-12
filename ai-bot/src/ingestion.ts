@@ -13,20 +13,20 @@
 // `channel.serverId` using the locally-cached channel table.
 
 import type { DbConnection } from '../../src/module_bindings/index.ts';
-import type { Message, AiConfig } from '../../src/module_bindings/types.ts';
-import type { LLMAdapter } from './llm.ts';
-import type { QdrantStore, MessagePoint } from './qdrant.ts';
+import type { AiConfig, Message } from '../../src/module_bindings/types.ts';
 import type { BotConfig } from './config.ts';
+import type { LLMAdapter } from './llm.ts';
+import type { MessagePoint, QdrantStore } from './qdrant.ts';
 
 export class Ingester {
-  private backfilled = new Set<string>();  // server IDs we've already backfilled this session
+  private backfilled = new Set<string>(); // server IDs we've already backfilled this session
 
   constructor(
     private conn: DbConnection,
     private qdrant: QdrantStore,
     private llm: LLMAdapter,
     private _cfg: BotConfig,
-    private botIdentityHex: string,
+    private botIdentityHex: string
   ) {}
 
   /** Return the serverId for a given channelId, or null if unknown. */
@@ -50,7 +50,12 @@ export class Ingester {
     if (!cfg) return new Set(); // AI not enabled = deny all
     const raw = cfg.sourceChannelIds.trim();
     if (raw === '') return null; // null = wildcard
-    return new Set(raw.split(',').map(s => s.trim()).filter(Boolean));
+    return new Set(
+      raw
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+    );
   }
 
   private shouldIndex(msg: Message): { ok: boolean; serverId: bigint | null } {
@@ -64,19 +69,19 @@ export class Ingester {
     const enabled = this.enabledServerIds();
     if (!enabled.has(serverId.toString())) return { ok: false, serverId };
     const allowed = this.allowedChannels(serverId);
-    if (allowed === null) return { ok: true, serverId };            // wildcard
+    if (allowed === null) return { ok: true, serverId }; // wildcard
     return { ok: allowed.has(msg.channelId.toString()), serverId };
   }
 
   private toPoint(msg: Message, serverId: bigint): MessagePoint {
     return {
-      messageId:       msg.id.toString(),
-      serverId:        serverId.toString(),
-      channelId:       msg.channelId.toString(),
-      threadId:        msg.threadId.toString(),
-      authorIdentity:  msg.authorId.toHexString(),
+      messageId: msg.id.toString(),
+      serverId: serverId.toString(),
+      channelId: msg.channelId.toString(),
+      threadId: msg.threadId.toString(),
+      authorIdentity: msg.authorId.toHexString(),
       createdAtMicros: msg.sent.microsSinceUnixEpoch.toString(),
-      content:         msg.text,
+      content: msg.text,
     };
   }
 
@@ -86,6 +91,9 @@ export class Ingester {
     if (t.length === 0) return t;
     // Slash commands shouldn't pollute the index.
     if (t.startsWith('/')) return '';
+    // Skip very short messages — greetings, reactions, single-word replies
+    // ("hi", "ok", "lol", "how are you") add noise without useful signal.
+    if (t.length < 30) return '';
     return t.slice(0, 4000);
   }
 
@@ -139,9 +147,11 @@ export class Ingester {
           kept.map((k, idx) => ({
             point: this.toPoint(k.msg, serverId),
             vector: vectors[idx]!,
-          })),
+          }))
         );
-        console.log(`[ingest] server ${serverId}: backfilled ${Math.min(i + CHUNK, batch.length)}/${batch.length}`);
+        console.log(
+          `[ingest] server ${serverId}: backfilled ${Math.min(i + CHUNK, batch.length)}/${batch.length}`
+        );
       } catch (err) {
         console.error(`[ingest] server ${serverId}: backfill chunk failed:`, err);
         await new Promise(r => setTimeout(r, 1000));
@@ -176,7 +186,9 @@ export class Ingester {
     });
     this.conn.db.ai_config.onInsert((_ctx, row) => {
       if (row.enabled) {
-        console.log(`[ingest] ai_config inserted already-enabled for server ${row.serverId}, starting backfill`);
+        console.log(
+          `[ingest] ai_config inserted already-enabled for server ${row.serverId}, starting backfill`
+        );
         void this.backfillServer(row.serverId);
       }
     });
