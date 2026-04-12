@@ -9,9 +9,7 @@
 #  Built from the repo root because ai-bot imports ../src/module_bindings.
 # =============================================================================
 
-FROM oven/bun:1.2-alpine
-
-RUN apk add --no-cache libc6-compat
+FROM oven/bun:1.2-debian
 WORKDIR /app
 
 # 1. Install root deps (module_bindings need the spacetimedb package).
