@@ -383,6 +383,34 @@ const notification = table(
 //
 // Per-server AI config lets admins enable/disable and cap token spend.
 
+// Per-channel permission overrides. Mirrors Discord's model:
+// each row is an override for a specific role or member on a specific channel.
+// `allow` and `deny` are bitfields using the same permission constants as
+// server_role.permissions. Bits not set in either field inherit from the
+// server-level role permissions.
+const channel_permission_override = table(
+  {
+    name: 'channel_permission_override',
+    public: true,
+    indexes: [
+      {
+        accessor: 'byChannelId',
+        name: 'chan_perm_override_channel_id',
+        algorithm: 'btree',
+        columns: ['channelId'],
+      },
+    ],
+  },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    channelId: t.u64(),
+    targetType: t.string(), // 'role' | 'member'
+    targetId: t.string(), // roleId.toString() or identity hex
+    allow: t.u64(), // bitfield of explicitly allowed permissions
+    deny: t.u64(), // bitfield of explicitly denied permissions
+  }
+);
+
 const ai_config = table(
   { name: 'ai_config', public: true },
   {
@@ -397,6 +425,21 @@ const ai_config = table(
     // Empty string = all channels in the server.
     sourceChannelIds: t.string(),
     createdAt: t.timestamp(),
+    updatedAt: t.timestamp(),
+  }
+);
+
+const channel_ai_config = table(
+  {
+    name: 'channel_ai_config',
+    public: true,
+  },
+  {
+    channelId: t.u64().primaryKey(),
+    indexingEnabled: t.bool(),
+    roleLabel: t.string(),
+    authorityWeight: t.u32(),
+    pinnedContext: t.string(),
     updatedAt: t.timestamp(),
   }
 );
@@ -535,7 +578,9 @@ const spacetimedb = schema({
   server_role,
   member_role,
   notification,
+  channel_permission_override,
   ai_config,
+  channel_ai_config,
   ask_request,
   ai_audit,
   dev_admin_secret,
@@ -696,6 +741,55 @@ function getMemberPermissions(
 function hasPerm(perms: bigint, flag: bigint): boolean {
   if ((perms & PERM_ADMINISTRATOR) !== 0n) return true;
   return (perms & flag) !== 0n;
+}
+
+// Compute effective permissions for a member in a specific channel by applying
+// channel-level permission overrides on top of server-level role permissions.
+// Resolution order (mirrors Discord):
+//   1. Server-level role permissions (base)
+//   2. Channel role overrides: deny bits removed, allow bits added
+//   3. Channel member-specific overrides: deny bits removed, allow bits added
+// If the member has ADMINISTRATOR at the server level, overrides are skipped.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getChannelEffectivePermissions(
+  ctx: any,
+  channelId: bigint,
+  serverId: bigint,
+  identity: { toHexString(): string }
+): bigint {
+  const basePerm = getMemberPermissions(ctx, serverId, identity);
+  // Administrator bypasses all channel overrides
+  if ((basePerm & PERM_ADMINISTRATOR) !== 0n) return basePerm;
+
+  const hexStr = identity.toHexString();
+
+  // Collect role IDs assigned to this user in this server
+  const roleIdStrs = new Set<string>();
+  for (const mr of ctx.db.member_role.byServerId.filter(serverId)) {
+    if ((mr.userIdentity as { toHexString(): string }).toHexString() === hexStr) {
+      roleIdStrs.add((mr.roleId as bigint).toString());
+    }
+  }
+
+  let roleDeny = 0n;
+  let roleAllow = 0n;
+  let memberDeny = 0n;
+  let memberAllow = 0n;
+
+  for (const ov of ctx.db.channel_permission_override.byChannelId.filter(channelId)) {
+    if ((ov.targetType as string) === 'role' && roleIdStrs.has(ov.targetId as string)) {
+      roleDeny |= ov.deny as bigint;
+      roleAllow |= ov.allow as bigint;
+    } else if ((ov.targetType as string) === 'member' && (ov.targetId as string) === hexStr) {
+      memberDeny |= ov.deny as bigint;
+      memberAllow |= ov.allow as bigint;
+    }
+  }
+
+  let perms = basePerm;
+  perms = (perms & ~roleDeny) | roleAllow;
+  perms = (perms & ~memberDeny) | memberAllow;
+  return perms;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1279,6 +1373,8 @@ export const delete_channel = spacetimedb.reducer({ channelId: t.u64() }, (ctx, 
   for (const th of ctx.db.thread.byChannelId.filter(channelId)) {
     ctx.db.thread.id.delete(th.id);
   }
+  const aiCfg = ctx.db.channel_ai_config.channelId.find(channelId);
+  if (aiCfg) ctx.db.channel_ai_config.channelId.delete(channelId);
   ctx.db.channel.id.delete(channelId);
 });
 
@@ -1307,7 +1403,7 @@ export const send_message = spacetimedb.reducer(
     // combined roles include SEND_MESSAGES (or ADMINISTRATOR) may post.
     // The server owner always has full access.
     if (!isSuperAdmin(ctx, ctx.sender) && senderMember.role !== 'owner') {
-      const perms = getMemberPermissions(ctx, chn.serverId, ctx.sender);
+      const perms = getChannelEffectivePermissions(ctx, channelId, chn.serverId, ctx.sender);
       if (!hasPerm(perms, PERM_SEND_MESSAGES)) {
         throw new SenderError("You don't have permission to send messages in this channel");
       }
@@ -1580,7 +1676,7 @@ export const update_channel = spacetimedb.reducer(
     }
     const normalized = normalizeChannelName(name);
     if (!normalized) throw new SenderError('Channel name is required');
-    ctx.db.channel.id.update({ ...chn, name: normalized, topic: topic.slice(0, 256) });
+    ctx.db.channel.id.update({ ...chn, name: normalized, topic: topic.slice(0, 1024) });
   }
 );
 
@@ -1972,6 +2068,128 @@ export const join_as_bot = spacetimedb.reducer(
       roleId,
       assignedAt: ctx.timestamp,
     });
+  }
+);
+
+// ============================================================================
+// CHANNEL AI CONFIG REDUCER
+// ============================================================================
+
+export const set_channel_ai_config = spacetimedb.reducer(
+  {
+    channelId: t.u64(),
+    indexingEnabled: t.bool(),
+    roleLabel: t.string(),
+    authorityWeight: t.u32(),
+    pinnedContext: t.string(),
+  },
+  (ctx, { channelId, indexingEnabled, roleLabel, authorityWeight, pinnedContext }) => {
+    const chn = ctx.db.channel.id.find(channelId);
+    if (!chn) throw new SenderError('Channel not found');
+
+    if (!isSuperAdmin(ctx, ctx.sender)) {
+      const member = requireMember(ctx, chn.serverId);
+      if (!isPrivileged(member.role)) {
+        throw new SenderError('Only server admins may configure channel AI settings');
+      }
+    }
+
+    const validRoles = ['general', 'documentation', 'changelog', 'qa', 'support', 'announcements'];
+    if (!validRoles.includes(roleLabel)) throw new SenderError('Invalid role label');
+    if (authorityWeight > 3) throw new SenderError('Authority weight must be 0-3');
+    if (pinnedContext.length > 500) throw new SenderError('Pinned context must be 500 characters or fewer');
+
+    const existing = ctx.db.channel_ai_config.channelId.find(channelId);
+    if (existing) {
+      ctx.db.channel_ai_config.channelId.update({ ...existing, indexingEnabled, roleLabel, authorityWeight, pinnedContext, updatedAt: ctx.timestamp });
+    } else {
+      ctx.db.channel_ai_config.insert({ channelId, indexingEnabled, roleLabel, authorityWeight, pinnedContext, updatedAt: ctx.timestamp });
+    }
+  }
+);
+
+// ============================================================================
+// CHANNEL PERMISSION OVERRIDE REDUCERS
+// ============================================================================
+
+// Upsert a per-channel permission override for a role or member.
+// If an override already exists for the given channel + target, update it;
+// otherwise insert a new row. Setting both allow and deny to 0 effectively
+// resets to "inherit" — the UI can call delete_channel_permission_override
+// instead for a cleaner result.
+export const set_channel_permission_override = spacetimedb.reducer(
+  {
+    channelId: t.u64(),
+    targetType: t.string(),
+    targetId: t.string(),
+    allow: t.u64(),
+    deny: t.u64(),
+  },
+  (ctx, { channelId, targetType, targetId, allow, deny }) => {
+    const chn = ctx.db.channel.id.find(channelId);
+    if (!chn) throw new SenderError('Channel not found');
+
+    // Only admins/owners (or super admins) may set permission overrides.
+    if (!isSuperAdmin(ctx, ctx.sender)) {
+      if (isDefaultServer(chn.serverId)) {
+        throw new SenderError('Only Super Admins may edit default server channel permissions');
+      }
+      const member = requireMember(ctx, chn.serverId);
+      if (!isPrivileged(member.role)) {
+        const perms = getMemberPermissions(ctx, chn.serverId, ctx.sender);
+        if (!hasPerm(perms, PERM_MANAGE_ROLES)) {
+          throw new SenderError('You need Manage Roles permission to edit channel permissions');
+        }
+      }
+    }
+
+    if (targetType !== 'role' && targetType !== 'member') {
+      throw new SenderError("targetType must be 'role' or 'member'");
+    }
+
+    // Upsert: find existing override for this channel + target.
+    for (const ov of ctx.db.channel_permission_override.byChannelId.filter(channelId)) {
+      if (ov.targetType === targetType && ov.targetId === targetId) {
+        ctx.db.channel_permission_override.id.update({ ...ov, allow, deny });
+        return;
+      }
+    }
+    // No existing override — insert.
+    ctx.db.channel_permission_override.insert({
+      id: 0n,
+      channelId,
+      targetType,
+      targetId,
+      allow,
+      deny,
+    });
+  }
+);
+
+// Remove a per-channel permission override (revert to server-level inheritance).
+export const delete_channel_permission_override = spacetimedb.reducer(
+  { overrideId: t.u64() },
+  (ctx, { overrideId }) => {
+    const ov = ctx.db.channel_permission_override.id.find(overrideId);
+    if (!ov) throw new SenderError('Override not found');
+
+    const chn = ctx.db.channel.id.find(ov.channelId);
+    if (!chn) throw new SenderError('Channel not found');
+
+    if (!isSuperAdmin(ctx, ctx.sender)) {
+      if (isDefaultServer(chn.serverId)) {
+        throw new SenderError('Only Super Admins may edit default server channel permissions');
+      }
+      const member = requireMember(ctx, chn.serverId);
+      if (!isPrivileged(member.role)) {
+        const perms = getMemberPermissions(ctx, chn.serverId, ctx.sender);
+        if (!hasPerm(perms, PERM_MANAGE_ROLES)) {
+          throw new SenderError('You need Manage Roles permission to edit channel permissions');
+        }
+      }
+    }
+
+    ctx.db.channel_permission_override.id.delete(overrideId);
   }
 );
 

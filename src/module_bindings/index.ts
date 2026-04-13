@@ -45,6 +45,7 @@ import CreateServerReducer from "./create_server_reducer";
 import CreateThreadReducer from "./create_thread_reducer";
 import DeleteCategoryReducer from "./delete_category_reducer";
 import DeleteChannelReducer from "./delete_channel_reducer";
+import DeleteChannelPermissionOverrideReducer from "./delete_channel_permission_override_reducer";
 import DeleteInviteReducer from "./delete_invite_reducer";
 import DeleteMessageReducer from "./delete_message_reducer";
 import DeleteRoleReducer from "./delete_role_reducer";
@@ -70,6 +71,8 @@ import RotateDevAdminSecretReducer from "./rotate_dev_admin_secret_reducer";
 import SeedDevAdminSecretReducer from "./seed_dev_admin_secret_reducer";
 import SendMessageReducer from "./send_message_reducer";
 import SendServerInviteReducer from "./send_server_invite_reducer";
+import SetChannelAiConfigReducer from "./set_channel_ai_config_reducer";
+import SetChannelPermissionOverrideReducer from "./set_channel_permission_override_reducer";
 import SetMemberRoleReducer from "./set_member_role_reducer";
 import SetNameReducer from "./set_name_reducer";
 import SetNicknameReducer from "./set_nickname_reducer";
@@ -95,6 +98,8 @@ import AiConfigRow from "./ai_config_table";
 import AskRequestRow from "./ask_request_table";
 import CategoryRow from "./category_table";
 import ChannelRow from "./channel_table";
+import ChannelAiConfigRow from "./channel_ai_config_table";
+import ChannelPermissionOverrideRow from "./channel_permission_override_table";
 import DevAdminAuditRow from "./dev_admin_audit_table";
 import InviteRow from "./invite_table";
 import MemberRoleRow from "./member_role_table";
@@ -186,6 +191,31 @@ const tablesSchema = __schema({
       { name: 'channel_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ChannelRow),
+  channel_ai_config: __table({
+    name: 'channel_ai_config',
+    indexes: [
+      { accessor: 'channelId', name: 'channel_ai_config_channel_id_idx_btree', algorithm: 'btree', columns: [
+        'channelId',
+      ] },
+    ],
+    constraints: [
+      { name: 'channel_ai_config_channel_id_key', constraint: 'unique', columns: ['channelId'] },
+    ],
+  }, ChannelAiConfigRow),
+  channel_permission_override: __table({
+    name: 'channel_permission_override',
+    indexes: [
+      { accessor: 'byChannelId', name: 'channel_permission_override_channel_id_idx_btree', algorithm: 'btree', columns: [
+        'channelId',
+      ] },
+      { accessor: 'id', name: 'channel_permission_override_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'channel_permission_override_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ChannelPermissionOverrideRow),
   dev_admin_audit: __table({
     name: 'dev_admin_audit',
     indexes: [
@@ -427,6 +457,7 @@ const reducersSchema = __reducers(
   __reducerSchema("create_thread", CreateThreadReducer),
   __reducerSchema("delete_category", DeleteCategoryReducer),
   __reducerSchema("delete_channel", DeleteChannelReducer),
+  __reducerSchema("delete_channel_permission_override", DeleteChannelPermissionOverrideReducer),
   __reducerSchema("delete_invite", DeleteInviteReducer),
   __reducerSchema("delete_message", DeleteMessageReducer),
   __reducerSchema("delete_role", DeleteRoleReducer),
@@ -452,6 +483,8 @@ const reducersSchema = __reducers(
   __reducerSchema("seed_dev_admin_secret", SeedDevAdminSecretReducer),
   __reducerSchema("send_message", SendMessageReducer),
   __reducerSchema("send_server_invite", SendServerInviteReducer),
+  __reducerSchema("set_channel_ai_config", SetChannelAiConfigReducer),
+  __reducerSchema("set_channel_permission_override", SetChannelPermissionOverrideReducer),
   __reducerSchema("set_member_role", SetMemberRoleReducer),
   __reducerSchema("set_name", SetNameReducer),
   __reducerSchema("set_nickname", SetNicknameReducer),

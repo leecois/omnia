@@ -72,6 +72,26 @@ export const Channel = __t.object("Channel", {
 });
 export type Channel = __Infer<typeof Channel>;
 
+export const ChannelAiConfig = __t.object("ChannelAiConfig", {
+  channelId: __t.u64(),
+  indexingEnabled: __t.bool(),
+  roleLabel: __t.string(),
+  authorityWeight: __t.u32(),
+  pinnedContext: __t.string(),
+  updatedAt: __t.timestamp(),
+});
+export type ChannelAiConfig = __Infer<typeof ChannelAiConfig>;
+
+export const ChannelPermissionOverride = __t.object("ChannelPermissionOverride", {
+  id: __t.u64(),
+  channelId: __t.u64(),
+  targetType: __t.string(),
+  targetId: __t.string(),
+  allow: __t.u64(),
+  deny: __t.u64(),
+});
+export type ChannelPermissionOverride = __Infer<typeof ChannelPermissionOverride>;
+
 export const DevAdminAudit = __t.object("DevAdminAudit", {
   id: __t.u64(),
   userIdentity: __t.identity(),
