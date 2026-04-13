@@ -549,6 +549,26 @@ a:hover {
   background: var(--bg-modifier-active);
 }
 
+.channel-settings-gear {
+  color: var(--interactive-normal);
+  padding: 0 2px;
+  width: 18px;
+  height: 18px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.channel-item:hover .channel-settings-gear {
+  display: flex;
+}
+.channel-settings-gear:hover {
+  color: var(--interactive-hover);
+  background: var(--bg-modifier-active);
+}
+
 .unread-dot {
   width: 8px;
   height: 8px;
@@ -6876,3 +6896,315 @@ a:hover {
   color: var(--text-muted);
   line-height: 1.5;
 }
+
+/* ============================================================================
+   Channel Settings — per-channel settings modal
+   ============================================================================ */
+
+.cs-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cs-hash {
+  color: var(--channels-default);
+  margin-right: 4px;
+}
+.cs-breadcrumb {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.cs-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--header-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 20px;
+}
+.cs-input {
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--input-background);
+  border: none;
+  color: var(--text-normal);
+  font-size: 16px;
+  outline: none;
+}
+.cs-input:focus {
+  box-shadow: 0 0 0 2px var(--blurple);
+}
+.cs-topic-wrap {
+  position: relative;
+}
+.cs-textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--input-background);
+  border: none;
+  color: var(--text-normal);
+  font-size: 14px;
+  resize: vertical;
+  min-height: 88px;
+  outline: none;
+  font-family: inherit;
+}
+.cs-textarea:focus {
+  box-shadow: 0 0 0 2px var(--blurple);
+}
+.cs-char-count {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cs-select {
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--input-background);
+  border: none;
+  color: var(--text-normal);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+.cs-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.cs-subtitle {
+  font-size: 14px;
+  color: var(--header-secondary);
+  margin: -8px 0 20px;
+  line-height: 1.4;
+}
+.cs-link-btn {
+  color: var(--text-link);
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.cs-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Save bar */
+.cs-save-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--elevation-high);
+  z-index: 210;
+  font-size: 14px;
+  color: var(--text-normal);
+  animation: settings-fade 0.15s ease-out;
+}
+.cs-save-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Permissions — tri-state toggles */
+.cs-role-selector {
+  margin-bottom: 20px;
+}
+.cs-perm-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cs-perm-group {
+  margin-bottom: 16px;
+}
+.cs-perm-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--header-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bg-modifier-accent);
+}
+.cs-perm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bg-modifier-accent);
+}
+.cs-perm-info {
+  flex: 1;
+  min-width: 0;
+  margin-right: 16px;
+}
+.cs-perm-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-normal);
+  margin-bottom: 2px;
+}
+.cs-perm-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+.cs-tri-toggle {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--bg-modifier-accent);
+}
+.cs-tri-btn {
+  width: 36px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.cs-tri-btn:not(:last-child) {
+  border-right: 1px solid var(--bg-modifier-accent);
+}
+.cs-tri-btn:hover {
+  background: var(--bg-modifier-hover);
+}
+.cs-tri-btn.deny.active {
+  background: var(--red-400);
+  color: #fff;
+}
+.cs-tri-btn.neutral.active {
+  background: var(--bg-modifier-active);
+  color: var(--interactive-active);
+}
+.cs-tri-btn.allow.active {
+  background: var(--green-400);
+  color: #fff;
+}
+
+/* Invites table */
+.cs-invite-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.cs-invite-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--header-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bg-modifier-accent);
+}
+.cs-invite-table td {
+  padding: 10px 12px;
+  color: var(--text-normal);
+  border-bottom: 1px solid var(--bg-modifier-accent);
+  vertical-align: middle;
+}
+.cs-inviter-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cs-inviter-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.cs-invite-code {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+}
+.cs-copy-btn {
+  background: none;
+  border: none;
+  color: var(--interactive-normal);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  margin-left: 4px;
+}
+.cs-copy-btn:hover {
+  color: var(--interactive-hover);
+}
+
+/* ── AI Assistant tab ─────────────────────────────────────────────────── */
+.cs-ai-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+.cs-ai-toggle-text { display: flex; flex-direction: column; gap: 2px; }
+.cs-ai-toggle-label { font-size: 15px; font-weight: 500; color: var(--header-primary); }
+.cs-ai-toggle-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+.cs-ai-toggle-switch {
+  width: 40px; height: 22px; border-radius: 11px;
+  background: var(--bg-tertiary); border: none; cursor: pointer;
+  position: relative; transition: background 0.15s; flex-shrink: 0;
+}
+.cs-ai-toggle-switch.active { background: var(--brand-500, #5865f2); }
+.cs-ai-toggle-switch:disabled { opacity: 0.5; cursor: not-allowed; }
+.cs-ai-toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: white; transition: transform 0.15s;
+}
+.cs-ai-toggle-switch.active .cs-ai-toggle-knob { transform: translateX(18px); }
+.cs-ai-weight-group { display: flex; gap: 8px; margin-top: 8px; }
+.cs-ai-weight-btn {
+  flex: 1; padding: 8px 12px; border-radius: var(--radius-sm);
+  border: 2px solid var(--bg-tertiary); background: var(--bg-secondary);
+  color: var(--text-normal); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.cs-ai-weight-btn:hover:not(:disabled) { background: var(--bg-tertiary); }
+.cs-ai-weight-btn.active { border-color: var(--brand-500, #5865f2); background: var(--brand-500, #5865f2); color: white; }
+.cs-ai-weight-btn:disabled { opacity: 0.5; cursor: not-allowed; }

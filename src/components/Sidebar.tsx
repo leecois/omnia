@@ -16,6 +16,7 @@ import type {
   User,
 } from '../module_bindings/types';
 import { generateAlias } from '../utils/alias';
+import ChannelSettings from './ChannelSettings';
 import ServerSettings from './ServerSettings';
 import SuperAdminPanel from './SuperAdminPanel';
 
@@ -84,6 +85,7 @@ export default function Sidebar({
   const [nameDraft, setNameDraft] = useState('');
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [showNotifications, setShowNotifications] = useState(false);
+  const [channelSettingsId, setChannelSettingsId] = useState<bigint | null>(null);
 
   const [allInvites] = useTable(tables.invite);
   const [allServerMembers] = useTable(tables.server_member);
@@ -132,40 +134,19 @@ export default function Sidebar({
           </span>
         )}
         {unread && !active && <span className="unread-dot" />}
-        {active && isChannelAdmin && (
-          <>
-            {serverCats.length > 0 && (
-              <select
-                className="channel-move-select"
-                value={channel.categoryId.toString()}
-                onClick={e => e.stopPropagation()}
-                onChange={e => {
-                  const id = BigInt(e.target.value);
-                  moveChannel({ channelId: channel.id, categoryId: id }).catch(console.error);
-                }}
-                title="Move to category"
-              >
-                <option value="0">Uncategorized</option>
-                {serverCats.map(c => (
-                  <option key={c.id.toString()} value={c.id.toString()}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              className="channel-delete"
-              title="Delete channel"
-              onClick={e => {
-                e.stopPropagation();
-                if (confirm(`Delete #${channel.name}?`)) {
-                  deleteChannel({ channelId: channel.id }).catch(console.error);
-                }
-              }}
-            >
-              ×
-            </button>
-          </>
+        {(isChannelAdmin || isSuperAdmin) && (
+          <button
+            className="channel-settings-gear"
+            title="Edit Channel"
+            onClick={e => {
+              e.stopPropagation();
+              setChannelSettingsId(channel.id);
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81a.47.47 0 00-.47-.41h-3.85c-.24 0-.44.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 9.87a.48.48 0 00.12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.47.41h3.85c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.61 3.61 0 0112 15.6z" />
+            </svg>
+          </button>
         )}
       </div>
     );
@@ -728,6 +709,25 @@ export default function Sidebar({
           onClose={() => setShowSuperAdminPanel(false)}
         />
       )}
+
+      {channelSettingsId !== null && selectedServer && (() => {
+        const ch = channels.find(c => c.id === channelSettingsId);
+        if (!ch) return null;
+        return (
+          <ChannelSettings
+            channel={ch}
+            serverId={selectedServer.id}
+            serverRoles={serverRoles.filter(r => r.serverId === selectedServer.id)}
+            invites={(allInvites as Invite[]).filter(inv => inv.serverId === selectedServer.id)}
+            users={allUsers}
+            isOwner={currentUser?.identity.toHexString() === selectedServer.ownerId.toHexString()}
+            isAdmin={isChannelAdmin}
+            isSuperAdmin={isSuperAdmin}
+            onClose={() => setChannelSettingsId(null)}
+            onDeleted={() => setChannelSettingsId(null)}
+          />
+        );
+      })()}
 
       {showServerSettings && selectedServer && (
         <ServerSettings
