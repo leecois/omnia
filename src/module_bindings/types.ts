@@ -30,6 +30,7 @@ export const AiConfig = __t.object("AiConfig", {
   monthlyTokenBudget: __t.u64(),
   tokensUsedThisMonth: __t.u64(),
   sourceChannelIds: __t.string(),
+  indexingEnabledByDefault: __t.bool(),
   createdAt: __t.timestamp(),
   updatedAt: __t.timestamp(),
 });

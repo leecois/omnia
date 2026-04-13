@@ -424,6 +424,9 @@ const ai_config = table(
     // Stored as a comma-separated list of channel IDs to stay schema-simple.
     // Empty string = all channels in the server.
     sourceChannelIds: t.string(),
+    // Server-wide default: should channels be indexed unless individually
+    // overridden via channel_ai_config? true = index all by default.
+    indexingEnabledByDefault: t.bool(),
     createdAt: t.timestamp(),
     updatedAt: t.timestamp(),
   }
@@ -1835,6 +1838,7 @@ export const ensure_ai_config = spacetimedb.reducer({ serverId: t.u64() }, (ctx,
     monthlyTokenBudget: 0n,
     tokensUsedThisMonth: 0n,
     sourceChannelIds: '',
+    indexingEnabledByDefault: true,
     createdAt: ctx.timestamp,
     updatedAt: ctx.timestamp,
   });
@@ -1850,10 +1854,19 @@ export const update_ai_config = spacetimedb.reducer(
     summarizeEnabled: t.bool(),
     monthlyTokenBudget: t.u64(),
     sourceChannelIds: t.string(),
+    indexingEnabledByDefault: t.bool(),
   },
   (
     ctx,
-    { serverId, enabled, askEnabled, summarizeEnabled, monthlyTokenBudget, sourceChannelIds }
+    {
+      serverId,
+      enabled,
+      askEnabled,
+      summarizeEnabled,
+      monthlyTokenBudget,
+      sourceChannelIds,
+      indexingEnabledByDefault,
+    }
   ) => {
     const srv = ctx.db.server.id.find(serverId);
     if (!srv) throw new SenderError('Server not found');
@@ -1874,6 +1887,7 @@ export const update_ai_config = spacetimedb.reducer(
         summarizeEnabled,
         monthlyTokenBudget,
         sourceChannelIds,
+        indexingEnabledByDefault,
         updatedAt: ctx.timestamp,
       });
     } else {
@@ -1885,6 +1899,7 @@ export const update_ai_config = spacetimedb.reducer(
         monthlyTokenBudget,
         tokensUsedThisMonth: 0n,
         sourceChannelIds,
+        indexingEnabledByDefault,
         createdAt: ctx.timestamp,
         updatedAt: ctx.timestamp,
       });
@@ -2104,6 +2119,27 @@ export const set_channel_ai_config = spacetimedb.reducer(
       ctx.db.channel_ai_config.channelId.update({ ...existing, indexingEnabled, roleLabel, authorityWeight, pinnedContext, updatedAt: ctx.timestamp });
     } else {
       ctx.db.channel_ai_config.insert({ channelId, indexingEnabled, roleLabel, authorityWeight, pinnedContext, updatedAt: ctx.timestamp });
+    }
+  }
+);
+
+// Reset a channel's AI config back to server defaults by deleting its override row.
+export const reset_channel_ai_config = spacetimedb.reducer(
+  { channelId: t.u64() },
+  (ctx, { channelId }) => {
+    const chn = ctx.db.channel.id.find(channelId);
+    if (!chn) throw new SenderError('Channel not found');
+
+    if (!isSuperAdmin(ctx, ctx.sender)) {
+      const member = requireMember(ctx, chn.serverId);
+      if (!isPrivileged(member.role)) {
+        throw new SenderError('Only server admins may reset channel AI settings');
+      }
+    }
+
+    const existing = ctx.db.channel_ai_config.channelId.find(channelId);
+    if (existing) {
+      ctx.db.channel_ai_config.channelId.delete(channelId);
     }
   }
 );

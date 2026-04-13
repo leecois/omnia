@@ -89,9 +89,15 @@ export class Ingester {
     if (!enabled.has(serverId.toString())) return { ok: false, serverId };
     const allowed = this.allowedChannels(serverId);
     if (allowed !== null && !allowed.has(msg.channelId.toString())) return { ok: false, serverId };
-    // Per-channel AI config: honour indexingEnabled flag if a row exists.
+    // Per-channel AI config: channel override beats server default.
+    // No channel row → fall back to server-wide indexingEnabledByDefault.
     const chAiCfg = this.conn.db.channel_ai_config.channelId.find(msg.channelId);
-    if (chAiCfg && !chAiCfg.indexingEnabled) return { ok: false, serverId };
+    if (chAiCfg) {
+      if (!chAiCfg.indexingEnabled) return { ok: false, serverId };
+    } else {
+      const srvCfg = this.conn.db.ai_config.serverId.find(serverId);
+      if (srvCfg && !srvCfg.indexingEnabledByDefault) return { ok: false, serverId };
+    }
     return { ok: true, serverId };
   }
 
@@ -154,7 +160,12 @@ export class Ingester {
       const allowed = this.allowedChannels(serverId);
       if (allowed !== null && !allowed.has(m.channelId.toString())) continue;
       const chAiCfg = this.conn.db.channel_ai_config.channelId.find(m.channelId);
-      if (chAiCfg && !chAiCfg.indexingEnabled) continue;
+      if (chAiCfg) {
+        if (!chAiCfg.indexingEnabled) continue;
+      } else {
+        const srvCfg = this.conn.db.ai_config.serverId.find(serverId);
+        if (srvCfg && !srvCfg.indexingEnabledByDefault) continue;
+      }
       batch.push(m);
     }
     if (batch.length === 0) {

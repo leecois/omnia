@@ -63,6 +63,7 @@ import LeaveServerReducer from "./leave_server_reducer";
 import MoveChannelReducer from "./move_channel_reducer";
 import PinMessageReducer from "./pin_message_reducer";
 import ReseedDefaultServerReducer from "./reseed_default_server_reducer";
+import ResetChannelAiConfigReducer from "./reset_channel_ai_config_reducer";
 import ResolveAskRequestReducer from "./resolve_ask_request_reducer";
 import RevokeSpecialRoleReducer from "./revoke_special_role_reducer";
 import RevokeSuperAdminReducer from "./revoke_super_admin_reducer";
@@ -475,6 +476,7 @@ const reducersSchema = __reducers(
   __reducerSchema("move_channel", MoveChannelReducer),
   __reducerSchema("pin_message", PinMessageReducer),
   __reducerSchema("reseed_default_server", ReseedDefaultServerReducer),
+  __reducerSchema("reset_channel_ai_config", ResetChannelAiConfigReducer),
   __reducerSchema("resolve_ask_request", ResolveAskRequestReducer),
   __reducerSchema("revoke_special_role", RevokeSpecialRoleReducer),
   __reducerSchema("revoke_super_admin", RevokeSuperAdminReducer),

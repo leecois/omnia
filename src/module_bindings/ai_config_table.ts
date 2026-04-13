@@ -18,6 +18,7 @@ export default __t.row({
   monthlyTokenBudget: __t.u64().name("monthly_token_budget"),
   tokensUsedThisMonth: __t.u64().name("tokens_used_this_month"),
   sourceChannelIds: __t.string().name("source_channel_ids"),
+  indexingEnabledByDefault: __t.bool().name("indexing_enabled_by_default"),
   createdAt: __t.timestamp().name("created_at"),
   updatedAt: __t.timestamp().name("updated_at"),
 });

@@ -11,11 +11,5 @@ import {
 } from "spacetimedb";
 
 export default {
-  serverId: __t.u64(),
-  enabled: __t.bool(),
-  askEnabled: __t.bool(),
-  summarizeEnabled: __t.bool(),
-  monthlyTokenBudget: __t.u64(),
-  sourceChannelIds: __t.string(),
-  indexingEnabledByDefault: __t.bool(),
+  channelId: __t.u64(),
 };
