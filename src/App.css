@@ -16,6 +16,7 @@
   --bg-modifier-selected: rgba(78, 80, 88, 0.6);
   --bg-message-hover: rgba(4, 4, 5, 0.07);
   --bg-textarea: #383a40;
+  --input-background: #1e1f22;
 
   /* ── Text / Interactive ──────────────────────────────────────────────── */
   --header-primary: #f2f3f5;
@@ -6927,36 +6928,62 @@ a:hover {
   letter-spacing: 0.04em;
   margin-bottom: 20px;
 }
+/* Channel name input with # prefix */
+.cs-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cs-input-prefix {
+  position: absolute;
+  left: 10px;
+  color: var(--channels-default);
+  font-size: 20px;
+  font-weight: 500;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
 .cs-input {
-  padding: 10px;
+  width: 100%;
+  padding: 10px 10px 10px 30px;
   border-radius: var(--radius-sm);
   background: var(--input-background);
   border: none;
   color: var(--text-normal);
   font-size: 16px;
   outline: none;
+  box-sizing: border-box;
+}
+.cs-input::placeholder {
+  color: var(--text-muted);
 }
 .cs-input:focus {
-  box-shadow: 0 0 0 2px var(--blurple);
+  box-shadow: 0 0 0 2px var(--brand-blurple);
 }
 .cs-topic-wrap {
   position: relative;
 }
 .cs-textarea {
   width: 100%;
-  padding: 10px;
+  padding: 10px 10px 28px;
   border-radius: var(--radius-sm);
   background: var(--input-background);
   border: none;
   color: var(--text-normal);
   font-size: 14px;
-  resize: vertical;
-  min-height: 88px;
+  resize: none;
+  min-height: 96px;
   outline: none;
   font-family: inherit;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+.cs-textarea::placeholder {
+  color: var(--text-muted);
 }
 .cs-textarea:focus {
-  box-shadow: 0 0 0 2px var(--blurple);
+  box-shadow: 0 0 0 2px var(--brand-blurple);
 }
 .cs-char-count {
   position: absolute;
@@ -6964,9 +6991,11 @@ a:hover {
   right: 10px;
   font-size: 12px;
   color: var(--text-muted);
+  pointer-events: none;
 }
 .cs-select {
-  padding: 10px;
+  width: 100%;
+  padding: 10px 36px 10px 10px;
   border-radius: var(--radius-sm);
   background: var(--input-background);
   border: none;
@@ -6974,6 +7003,18 @@ a:hover {
   font-size: 14px;
   outline: none;
   cursor: pointer;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%23949ba4'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.cs-select:focus {
+  box-shadow: 0 0 0 2px var(--brand-blurple);
+}
+.cs-select option {
+  background: var(--bg-floating);
 }
 .cs-hint {
   font-size: 12px;
@@ -7001,6 +7042,16 @@ a:hover {
 }
 .cs-link-btn:hover {
   text-decoration: underline;
+}
+.cs-reset-row {
+  margin: 4px 0 20px;
+}
+.cs-ai-override-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-blurple);
+  flex-shrink: 0;
 }
 
 /* Save bar */

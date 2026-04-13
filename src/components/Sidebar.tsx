@@ -89,6 +89,7 @@ export default function Sidebar({
 
   const [allInvites] = useTable(tables.invite);
   const [allServerMembers] = useTable(tables.server_member);
+  const [channelAiConfigs] = useTable(tables.channel_ai_config);
 
   const createServer = useReducer(reducers.createServer);
   const createChannel = useReducer(reducers.createChannel);
@@ -120,6 +121,7 @@ export default function Sidebar({
     const unread =
       channel.lastMessageId !== 0n &&
       (rs === undefined || rs.lastReadMessageId < channel.lastMessageId);
+    const hasAiOverride = channelAiConfigs.some(c => c.channelId === channel.id);
     return (
       <div
         key={channel.id.toString()}
@@ -132,6 +134,9 @@ export default function Sidebar({
           <span className="channel-slowmode-icon" title={`Slowmode: ${channel.slowmodeSeconds}s`}>
             ⏱
           </span>
+        )}
+        {hasAiOverride && (isChannelAdmin || isSuperAdmin) && (
+          <span className="cs-ai-override-dot" title="AI settings overridden for this channel" />
         )}
         {unread && !active && <span className="unread-dot" />}
         {(isChannelAdmin || isSuperAdmin) && (

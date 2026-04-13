@@ -248,14 +248,17 @@ function OverviewTab({ channel, canEdit }: { channel: Channel; canEdit: boolean 
 
       <label className="cs-label">
         CHANNEL NAME
-        <input
-          type="text"
-          className="cs-input"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          disabled={!canEdit}
-          maxLength={100}
-        />
+        <div className="cs-input-wrap">
+          <span className="cs-input-prefix">#</span>
+          <input
+            type="text"
+            className="cs-input"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            disabled={!canEdit}
+            maxLength={100}
+          />
+        </div>
       </label>
 
       <label className="cs-label">
@@ -681,36 +684,44 @@ const AUTHORITY_OPTIONS = [
 
 function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boolean }) {
   const setConfig = useReducer(reducers.setChannelAiConfig);
-  const [allConfigs] = useTable(tables.channel_ai_config);
+  const resetConfig = useReducer(reducers.resetChannelAiConfig);
+  const [allChannelConfigs] = useTable(tables.channel_ai_config);
+  const [allServerConfigs] = useTable(tables.ai_config);
 
-  const config = allConfigs.find(c => c.channelId === channel.id);
-  const defaults = {
-    indexingEnabled: true,
-    roleLabel: 'general',
-    authorityWeight: 1,
-    pinnedContext: '',
-  };
+  // channel override row (undefined = using server default)
+  const channelCfg = allChannelConfigs.find(c => c.channelId === channel.id);
+  const serverCfg = allServerConfigs.find(c => c.serverId === channel.serverId);
+  const isOverride = channelCfg !== undefined;
+  const serverDefault = serverCfg?.indexingEnabledByDefault ?? true;
 
-  const [indexing, setIndexing] = useState(config?.indexingEnabled ?? defaults.indexingEnabled);
-  const [role, setRole] = useState(config?.roleLabel ?? defaults.roleLabel);
-  const [weight, setWeight] = useState<number>(config?.authorityWeight ?? defaults.authorityWeight);
-  const [pinned, setPinned] = useState(config?.pinnedContext ?? defaults.pinnedContext);
+  const [indexing, setIndexing] = useState(channelCfg?.indexingEnabled ?? serverDefault);
+  const [role, setRole] = useState(channelCfg?.roleLabel ?? 'general');
+  const [weight, setWeight] = useState<number>(channelCfg?.authorityWeight ?? 1);
+  const [pinned, setPinned] = useState(channelCfg?.pinnedContext ?? '');
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    setIndexing(config?.indexingEnabled ?? defaults.indexingEnabled);
-    setRole(config?.roleLabel ?? defaults.roleLabel);
-    setWeight(config?.authorityWeight ?? defaults.authorityWeight);
-    setPinned(config?.pinnedContext ?? defaults.pinnedContext);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config?.indexingEnabled, config?.roleLabel, config?.authorityWeight, config?.pinnedContext]);
+    const srDefault = serverCfg?.indexingEnabledByDefault ?? true;
+    setIndexing(channelCfg?.indexingEnabled ?? srDefault);
+    setRole(channelCfg?.roleLabel ?? 'general');
+    setWeight(channelCfg?.authorityWeight ?? 1);
+    setPinned(channelCfg?.pinnedContext ?? '');
+  }, [
+    channelCfg?.indexingEnabled,
+    channelCfg?.roleLabel,
+    channelCfg?.authorityWeight,
+    channelCfg?.pinnedContext,
+    serverCfg?.indexingEnabledByDefault,
+  ]);
 
   const dirty =
-    indexing !== (config?.indexingEnabled ?? defaults.indexingEnabled) ||
-    role !== (config?.roleLabel ?? defaults.roleLabel) ||
-    weight !== (config?.authorityWeight ?? defaults.authorityWeight) ||
-    pinned !== (config?.pinnedContext ?? defaults.pinnedContext);
+    isOverride &&
+    (indexing !== channelCfg!.indexingEnabled ||
+      role !== channelCfg!.roleLabel ||
+      weight !== channelCfg!.authorityWeight ||
+      pinned !== channelCfg!.pinnedContext);
 
   const save = async () => {
     setSaving(true);
@@ -729,87 +740,160 @@ function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boole
     setSaving(false);
   };
 
-  const reset = () => {
-    setIndexing(config?.indexingEnabled ?? defaults.indexingEnabled);
-    setRole(config?.roleLabel ?? defaults.roleLabel);
-    setWeight(config?.authorityWeight ?? defaults.authorityWeight);
-    setPinned(config?.pinnedContext ?? defaults.pinnedContext);
+  // Creates an override row seeded from the current server default.
+  const handleCustomize = async () => {
+    setSaving(true);
+    setErr('');
+    try {
+      await setConfig({
+        channelId: channel.id,
+        indexingEnabled: serverDefault,
+        roleLabel: 'general',
+        authorityWeight: 1,
+        pinnedContext: '',
+      });
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+    setSaving(false);
+  };
+
+  // Deletes the override row — channel reverts to server default.
+  const handleReset = async () => {
+    setResetting(true);
+    setErr('');
+    try {
+      await resetConfig({ channelId: channel.id });
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+    setResetting(false);
+  };
+
+  const resetForm = () => {
+    if (!channelCfg) return;
+    setIndexing(channelCfg.indexingEnabled);
+    setRole(channelCfg.roleLabel);
+    setWeight(channelCfg.authorityWeight);
+    setPinned(channelCfg.pinnedContext);
     setErr('');
   };
 
   return (
     <div className="settings-section">
       <h2 className="settings-section-title">AI Assistant</h2>
-      <p className="cs-hint" style={{ marginBottom: 16 }}>
+      <p className="cs-hint" style={{ marginBottom: 20 }}>
         Configure how this channel interacts with the AI assistant and search indexing.
       </p>
 
-      <div className="cs-ai-toggle-row">
+      {/* ── Search indexing — synced vs override ── */}
+      <div className="cs-ai-toggle-row" style={{ marginBottom: 24 }}>
         <div className="cs-ai-toggle-text">
           <span className="cs-ai-toggle-label">Search Indexing</span>
-          <span className="cs-ai-toggle-desc">
-            Include this channel's messages in the AI knowledge base
-          </span>
+          {!isOverride ? (
+            <span className="cs-ai-toggle-desc">
+              Using server default —{' '}
+              <strong style={{ color: serverDefault ? 'var(--green-360)' : 'var(--text-muted)' }}>
+                {serverDefault ? 'On' : 'Off'}
+              </strong>
+            </span>
+          ) : (
+            <span className="cs-ai-toggle-desc">
+              Channel override — overrides server default (
+              {serverDefault ? 'On' : 'Off'})
+            </span>
+          )}
         </div>
-        <button
-          className={`cs-ai-toggle-switch ${indexing ? 'active' : ''}`}
-          onClick={() => canEdit && setIndexing(!indexing)}
-          disabled={!canEdit}
-          aria-label="Toggle search indexing"
-        >
-          <span className="cs-ai-toggle-knob" />
-        </button>
+        {!isOverride ? (
+          <button
+            className="btn-secondary"
+            style={{ flexShrink: 0, fontSize: 13, padding: '6px 12px' }}
+            onClick={handleCustomize}
+            disabled={!canEdit || saving}
+          >
+            Customize
+          </button>
+        ) : (
+          <button
+            className={`cs-ai-toggle-switch ${indexing ? 'active' : ''}`}
+            onClick={() => canEdit && setIndexing(v => !v)}
+            disabled={!canEdit}
+            aria-label="Toggle search indexing"
+          >
+            <span className="cs-ai-toggle-knob" />
+          </button>
+        )}
       </div>
 
-      <label className="cs-label">
-        CHANNEL ROLE
-        <select className="cs-select" value={role} onChange={e => setRole(e.target.value)} disabled={!canEdit}>
-          {ROLE_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        <span className="cs-hint">
-          Helps the AI understand the type of content in this channel
-        </span>
-      </label>
-
-      <label className="cs-label">
-        CONTENT AUTHORITY
-        <div className="cs-ai-weight-group">
-          {AUTHORITY_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              className={`cs-ai-weight-btn ${weight === opt.value ? 'active' : ''}`}
-              onClick={() => canEdit && setWeight(opt.value)}
+      {/* ── Override-only settings ── */}
+      {isOverride && (
+        <>
+          <label className="cs-label">
+            CHANNEL ROLE
+            <select
+              className="cs-select"
+              value={role}
+              onChange={e => setRole(e.target.value)}
               disabled={!canEdit}
             >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <span className="cs-hint">
-          Higher authority channels are prioritized in AI search results
-        </span>
-      </label>
+              {ROLE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <span className="cs-hint">
+              Helps the AI understand the type of content in this channel
+            </span>
+          </label>
 
-      <label className="cs-label">
-        PINNED CONTEXT
-        <div className="cs-topic-wrap">
-          <textarea
-            className="cs-textarea"
-            value={pinned}
-            onChange={e => setPinned(e.target.value.slice(0, 500))}
-            disabled={!canEdit}
-            maxLength={500}
-            placeholder="Extra context the AI will use when answering questions about this channel..."
-            rows={4}
-          />
-          <span className="cs-char-count">{pinned.length}/500</span>
-        </div>
-        <span className="cs-hint">
-          This text is injected into the AI's system prompt for queries referencing this channel
-        </span>
-      </label>
+          <label className="cs-label">
+            CONTENT AUTHORITY
+            <div className="cs-ai-weight-group">
+              {AUTHORITY_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  className={`cs-ai-weight-btn ${weight === opt.value ? 'active' : ''}`}
+                  onClick={() => canEdit && setWeight(opt.value)}
+                  disabled={!canEdit}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <span className="cs-hint">
+              Higher authority channels are prioritized in AI search results
+            </span>
+          </label>
+
+          <label className="cs-label">
+            PINNED CONTEXT
+            <div className="cs-topic-wrap">
+              <textarea
+                className="cs-textarea"
+                value={pinned}
+                onChange={e => setPinned(e.target.value.slice(0, 500))}
+                disabled={!canEdit}
+                maxLength={500}
+                placeholder="Extra context the AI will use when answering questions about this channel..."
+                rows={4}
+              />
+              <span className="cs-char-count">{pinned.length}/500</span>
+            </div>
+            <span className="cs-hint">
+              This text is injected into the AI's system prompt for queries referencing this channel
+            </span>
+          </label>
+
+          {canEdit && (
+            <div className="cs-reset-row">
+              <button className="cs-link-btn" onClick={handleReset} disabled={resetting}>
+                ↩ Reset to server default ({serverDefault ? 'On' : 'Off'})
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
       {err && <div className="settings-error">{err}</div>}
 
@@ -817,9 +901,11 @@ function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boole
         <div className="cs-save-bar">
           <span>Careful — you have unsaved changes!</span>
           <div className="cs-save-actions">
-            <button type="button" className="btn-secondary" onClick={reset} disabled={saving}>Reset</button>
+            <button type="button" className="btn-secondary" onClick={resetForm} disabled={saving}>
+              Reset
+            </button>
             <button type="button" className="btn-primary" onClick={save} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
         </div>
