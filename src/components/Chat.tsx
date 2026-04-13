@@ -636,10 +636,14 @@ function ChannelPane({
         console.error(err);
         setDraft(text);
         setAttachmentUrl(url);
-        // Parse "wait Ns" from slowmode error and start cooldown
         const msg = String(err?.message ?? err);
+        // Parse "wait Ns" from slowmode error and start cooldown
         const m = msg.match(/wait (\d+)s/);
-        if (m) setCooldownUntil(Date.now() + Number.parseInt(m[1], 10) * 1000);
+        if (m) {
+          setCooldownUntil(Date.now() + Number.parseInt(m[1], 10) * 1000);
+        } else {
+          setSlashError(msg);
+        }
       });
   };
 

@@ -36,6 +36,7 @@ export default function App() {
   const [memberRoles] = useTable(tables.member_role);
   const [allInvites] = useTable(tables.invite);
   const [allNotifications] = useTable(tables.notification);
+  const [channelPermissionOverrides] = useTable(tables.channel_permission_override);
 
   const joinServer = useReducer(reducers.joinServer);
 
@@ -137,16 +138,37 @@ export default function App() {
     return result;
   }, [serverRoles, memberRoles, myHex]);
 
-  const canWriteInServer = (serverId: bigint): boolean => {
+  const canWriteInChannel = (channel: { id: bigint; serverId: bigint }): boolean => {
     if (isSuperAdmin) return true;
-    // Server owners always have write access
     const myMembership = allMembers.find(
-      m => m.serverId === serverId && m.userIdentity.toHexString() === myHex
+      m => m.serverId === channel.serverId && m.userIdentity.toHexString() === myHex
     );
-    if (myMembership?.role === 'owner') return true;
-    const perms = myPermissionsByServer.get(serverId.toString()) ?? 0n;
-    if ((perms & PERM_ADMINISTRATOR) !== 0n) return true;
-    return (perms & PERM_SEND_MESSAGES) !== 0n;
+    if (!myMembership) return false;
+    if (myMembership.role === 'owner') return true;
+    const serverPerms = myPermissionsByServer.get(channel.serverId.toString()) ?? 0n;
+    if ((serverPerms & PERM_ADMINISTRATOR) !== 0n) return true;
+    if ((serverPerms & PERM_SEND_MESSAGES) === 0n) return false;
+
+    // Apply channel-level permission overrides
+    const myRoleIds = new Set(
+      memberRoles
+        .filter(mr => mr.serverId === channel.serverId && mr.userIdentity.toHexString() === myHex)
+        .map(mr => mr.roleId.toString())
+    );
+    let roleDeny = 0n;
+    let roleAllow = 0n;
+    for (const ov of channelPermissionOverrides) {
+      if (ov.channelId !== channel.id) continue;
+      if (ov.targetType === 'role' && myRoleIds.has(ov.targetId)) {
+        roleDeny |= ov.deny;
+        roleAllow |= ov.allow;
+      } else if (ov.targetType === 'member' && ov.targetId === myHex) {
+        roleDeny |= ov.deny;
+        roleAllow |= ov.allow;
+      }
+    }
+    const effective = (serverPerms & ~roleDeny) | roleAllow;
+    return (effective & PERM_SEND_MESSAGES) !== 0n;
   };
 
   // Only show servers the current user has joined
@@ -299,7 +321,7 @@ export default function App() {
             serverMembers={serverMembers as ServerMember[]}
             isChannelAdmin={isChannelAdmin}
             currentIdentityHex={myHex}
-            canWrite={canWriteInServer(selectedChannel.serverId)}
+            canWrite={canWriteInChannel(selectedChannel)}
             activeThreadId={activeThreadId}
             onOpenThread={setActiveThreadId}
             onCloseThread={() => setActiveThreadId(null)}
