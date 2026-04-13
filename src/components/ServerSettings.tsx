@@ -1212,6 +1212,7 @@ function AiSection({ server, canEdit }: { server: Server; canEdit: boolean }) {
   const [enabled, setEnabled] = useState(false);
   const [askEnabled, setAskEnabled] = useState(false);
   const [summarizeEnabled, setSummarizeEnabled] = useState(false);
+  const [indexingEnabledByDefault, setIndexingEnabledByDefault] = useState(true);
   const [monthlyTokenBudget, setMonthlyTokenBudget] = useState<string>('1000000');
   const [sourceChannelIds, setSourceChannelIds] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -1232,6 +1233,7 @@ function AiSection({ server, canEdit }: { server: Server; canEdit: boolean }) {
       setEnabled(existing.enabled);
       setAskEnabled(existing.askEnabled);
       setSummarizeEnabled(existing.summarizeEnabled);
+      setIndexingEnabledByDefault(existing.indexingEnabledByDefault);
       setMonthlyTokenBudget(existing.monthlyTokenBudget.toString());
       setSourceChannelIds(existing.sourceChannelIds);
     }
@@ -1245,16 +1247,18 @@ function AiSection({ server, canEdit }: { server: Server; canEdit: boolean }) {
       enabled !== existing.enabled ||
       askEnabled !== existing.askEnabled ||
       summarizeEnabled !== existing.summarizeEnabled ||
+      indexingEnabledByDefault !== existing.indexingEnabledByDefault ||
       (monthlyTokenBudget.trim() || '0') !== existing.monthlyTokenBudget.toString() ||
       sourceChannelIds.trim() !== existing.sourceChannelIds
     );
-  }, [existing, enabled, askEnabled, summarizeEnabled, monthlyTokenBudget, sourceChannelIds]);
+  }, [existing, enabled, askEnabled, summarizeEnabled, indexingEnabledByDefault, monthlyTokenBudget, sourceChannelIds]);
 
   const reset = () => {
     if (!existing) return;
     setEnabled(existing.enabled);
     setAskEnabled(existing.askEnabled);
     setSummarizeEnabled(existing.summarizeEnabled);
+    setIndexingEnabledByDefault(existing.indexingEnabledByDefault);
     setMonthlyTokenBudget(existing.monthlyTokenBudget.toString());
     setSourceChannelIds(existing.sourceChannelIds);
     setError(null);
@@ -1274,6 +1278,7 @@ function AiSection({ server, canEdit }: { server: Server; canEdit: boolean }) {
         enabled,
         askEnabled,
         summarizeEnabled,
+        indexingEnabledByDefault,
         monthlyTokenBudget: BigInt(trimmed),
         sourceChannelIds: sourceChannelIds.trim(),
       });
@@ -1344,6 +1349,19 @@ function AiSection({ server, canEdit }: { server: Server; canEdit: boolean }) {
           disabled={!canEdit || !enabled}
           onChange={setSummarizeEnabled}
           badge="SOON"
+        />
+      </div>
+
+      {/* ── Indexing defaults ────────────────────────────────────── */}
+      <div className="ai-group">
+        <div className="ai-group-header">Indexing Defaults</div>
+        <AiToggleRow
+          label="Index all channels by default"
+          title="Index all channels by default"
+          sub="New and existing channels will be indexed unless individually overridden in their channel settings. Turn this off to opt channels in one by one."
+          checked={indexingEnabledByDefault}
+          disabled={!canEdit || !enabled}
+          onChange={setIndexingEnabledByDefault}
         />
       </div>
 
