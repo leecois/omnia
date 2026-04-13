@@ -147,8 +147,10 @@ export default function App() {
     if (myMembership.role === 'owner') return true;
     const serverPerms = myPermissionsByServer.get(channel.serverId.toString()) ?? 0n;
     if ((serverPerms & PERM_ADMINISTRATOR) !== 0n) return true;
-    if ((serverPerms & PERM_SEND_MESSAGES) === 0n) return false;
 
+    // Do NOT short-circuit here on server-level SEND_MESSAGES absence —
+    // a channel-level allow override can grant this permission even when the
+    // server base does not include it (mirrors Discord's resolution model).
     // Apply channel-level permission overrides
     const myRoleIds = new Set(
       memberRoles
