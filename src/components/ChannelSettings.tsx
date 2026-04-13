@@ -691,8 +691,12 @@ function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boole
   // channel override row (undefined = using server default)
   const channelCfg = allChannelConfigs.find(c => c.channelId === channel.id);
   const serverCfg = allServerConfigs.find(c => c.serverId === channel.serverId);
-  const isOverride = channelCfg !== undefined;
   const serverDefault = serverCfg?.indexingEnabledByDefault ?? true;
+
+  // Optimistic override state: null = follow subscription, true/false = pending op.
+  // Cleared whenever the subscription row actually changes so real state wins.
+  const [pendingOverride, setPendingOverride] = useState<boolean | null>(null);
+  const isOverride = pendingOverride ?? (channelCfg !== undefined);
 
   const [indexing, setIndexing] = useState(channelCfg?.indexingEnabled ?? serverDefault);
   const [role, setRole] = useState(channelCfg?.roleLabel ?? 'general');
@@ -703,6 +707,8 @@ function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boole
   const [err, setErr] = useState('');
 
   useEffect(() => {
+    // Real state arrived from subscription — clear optimistic flag and sync form.
+    setPendingOverride(null);
     const srDefault = serverCfg?.indexingEnabledByDefault ?? true;
     setIndexing(channelCfg?.indexingEnabled ?? srDefault);
     setRole(channelCfg?.roleLabel ?? 'general');
@@ -742,6 +748,13 @@ function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boole
 
   // Creates an override row seeded from the current server default.
   const handleCustomize = async () => {
+    // Optimistically switch to override mode so the UI responds immediately,
+    // before the maincloud subscription round-trip completes.
+    setPendingOverride(true);
+    setIndexing(serverDefault);
+    setRole('general');
+    setWeight(1);
+    setPinned('');
     setSaving(true);
     setErr('');
     try {
@@ -753,6 +766,7 @@ function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boole
         pinnedContext: '',
       });
     } catch (e: unknown) {
+      setPendingOverride(null); // roll back on error
       setErr(e instanceof Error ? e.message : String(e));
     }
     setSaving(false);
@@ -760,11 +774,14 @@ function AIAssistantTab({ channel, canEdit }: { channel: Channel; canEdit: boole
 
   // Deletes the override row — channel reverts to server default.
   const handleReset = async () => {
+    // Optimistically switch back to synced mode immediately.
+    setPendingOverride(false);
     setResetting(true);
     setErr('');
     try {
       await resetConfig({ channelId: channel.id });
     } catch (e: unknown) {
+      setPendingOverride(null); // roll back on error
       setErr(e instanceof Error ? e.message : String(e));
     }
     setResetting(false);
