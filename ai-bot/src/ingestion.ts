@@ -88,11 +88,15 @@ export class Ingester {
     const enabled = this.enabledServerIds();
     if (!enabled.has(serverId.toString())) return { ok: false, serverId };
     const allowed = this.allowedChannels(serverId);
-    if (allowed === null) return { ok: true, serverId }; // wildcard
-    return { ok: allowed.has(msg.channelId.toString()), serverId };
+    if (allowed !== null && !allowed.has(msg.channelId.toString())) return { ok: false, serverId };
+    // Per-channel AI config: honour indexingEnabled flag if a row exists.
+    const chAiCfg = this.conn.db.channel_ai_config.channelId.find(msg.channelId);
+    if (chAiCfg && !chAiCfg.indexingEnabled) return { ok: false, serverId };
+    return { ok: true, serverId };
   }
 
   private toPoint(msg: Message, serverId: bigint): MessagePoint {
+    const chCfg = this.conn.db.channel_ai_config.channelId.find(msg.channelId);
     return {
       messageId: msg.id.toString(),
       serverId: serverId.toString(),
@@ -101,6 +105,8 @@ export class Ingester {
       authorIdentity: msg.authorId.toHexString(),
       createdAtMicros: msg.sent.microsSinceUnixEpoch.toString(),
       content: msg.text,
+      roleLabel: chCfg?.roleLabel ?? 'general',
+      authorityWeight: chCfg?.authorityWeight ?? 1,
     };
   }
 
@@ -147,6 +153,8 @@ export class Ingester {
       if (!ch || ch.serverId !== serverId) continue;
       const allowed = this.allowedChannels(serverId);
       if (allowed !== null && !allowed.has(m.channelId.toString())) continue;
+      const chAiCfg = this.conn.db.channel_ai_config.channelId.find(m.channelId);
+      if (chAiCfg && !chAiCfg.indexingEnabled) continue;
       batch.push(m);
     }
     if (batch.length === 0) {

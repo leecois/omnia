@@ -124,6 +124,16 @@ export class RAGHandler {
       }
     }
 
+    // Apply authority weight multiplier from channel_ai_config.
+    // Low=0.5, Normal=1.0, High=1.5, Canonical=2.0
+    const WEIGHT_MULTIPLIERS = [0.5, 1.0, 1.5, 2.0];
+    for (const entry of contexts) {
+      const chCfg = this.conn.db.channel_ai_config.channelId.find(entry.msg.channelId);
+      const weight = chCfg?.authorityWeight ?? 1;
+      entry.score *= WEIGHT_MULTIPLIERS[weight] ?? 1.0;
+    }
+    contexts.sort((a, b) => b.score - a.score);
+
     if (contexts.length === 0) {
       // No sources — degrade gracefully with a "not found" answer.
       await this.ensureBotMember(req.serverId);
@@ -141,13 +151,36 @@ export class RAGHandler {
 
     const userPrompt = `QUESTION:\n${req.question}\n\nCONTEXT:\n${contextBlock}`;
 
+    // Collect pinned contexts from channels referenced in results.
+    const seenChannels = new Set<string>();
+    const pinnedParts: string[] = [];
+    for (const c of contexts) {
+      const chKey = c.msg.channelId.toString();
+      if (seenChannels.has(chKey)) continue;
+      seenChannels.add(chKey);
+      const chCfg = this.conn.db.channel_ai_config.channelId.find(c.msg.channelId);
+      if (chCfg?.pinnedContext?.trim()) {
+        const chName = this.conn.db.channel.id.find(c.msg.channelId)?.name ?? chKey;
+        pinnedParts.push(`[#${chName}]: ${chCfg.pinnedContext.trim()}`);
+      }
+    }
+    let systemPrompt = SYSTEM_PROMPT;
+    if (pinnedParts.length > 0) {
+      systemPrompt += '\n\nCHANNEL CONTEXT:\n' + pinnedParts.join('\n');
+    }
+
     // 5. Call the LLM.
-    const res = await this.llm.chat(SYSTEM_PROMPT, userPrompt);
+    const res = await this.llm.chat(systemPrompt, userPrompt);
 
     // 6. Append a citations footer with deep-links to each source message.
     // Path format: /c/:serverId/:channelId/:messageId (matches useRoute.ts)
     const citations = contexts
-      .map(c => `[[${c.rank}]](/c/${req.serverId}/${c.msg.channelId}/${c.msg.id})`)
+      .map(c => {
+        const chCfg = this.conn.db.channel_ai_config.channelId.find(c.msg.channelId);
+        const roleLabel = chCfg?.roleLabel ?? 'general';
+        const roleSuffix = roleLabel !== 'general' ? ` (${roleLabel})` : '';
+        return `[[${c.rank}]](/c/${req.serverId}/${c.msg.channelId}/${c.msg.id})${roleSuffix}`;
+      })
       .join('  ');
     const answerText = `${res.text}\n\n_Sources: ${citations}_`;
 

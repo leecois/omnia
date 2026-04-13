@@ -15,6 +15,8 @@ export interface MessagePoint {
   authorIdentity: string; // hex
   createdAtMicros: string;
   content: string;
+  roleLabel?: string;       // from channel_ai_config (default: 'general')
+  authorityWeight?: number; // from channel_ai_config (0-3, default: 1)
 }
 
 export interface SearchResult {
