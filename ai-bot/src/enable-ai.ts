@@ -23,6 +23,7 @@ async function main() {
     summarizeEnabled: false,
     monthlyTokenBudget: 0n,
     sourceChannelIds: '',
+    indexingEnabledByDefault: true,
   });
   console.log('Done — AI is now enabled on server #1');
   process.exit(0);

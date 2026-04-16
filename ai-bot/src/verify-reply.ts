@@ -38,6 +38,7 @@ async function main(): Promise<void> {
         summarizeEnabled: false,
         monthlyTokenBudget: 0n,
         sourceChannelIds: '',
+        indexingEnabledByDefault: true,
       });
       console.log('[verify] ✓ AI enabled');
     } catch (err) {
