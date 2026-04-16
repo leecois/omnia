@@ -308,11 +308,13 @@ function stripSourceMentions(text: string): string {
 
   // Remove explicit source/footer sections.
   out = out.replace(/\n{0,2}_?\s*sources?\s*:[\s\S]*$/im, '').trim();
+  out = out.replace(/\n{0,2}_?\s*references?\s*:[\s\S]*$/im, '').trim();
   out = out.replace(/\n{0,2}_?\s*nguồn\s*:[\s\S]*$/im, '').trim();
+  out = out.replace(/\n{0,2}_?\s*tài\s*liệu\s*tham\s*khảo\s*:[\s\S]*$/im, '').trim();
 
   // Remove inline citation markers like [1], [12], [[3]](/link).
   out = out.replace(/\[\[(\d+)\]\]\([^)]*\)/g, '');
-  out = out.replace(/\[(\d+)\]/g, '');
+  out = out.replace(/(?<![\w\]])\[(\d{1,2})\](?!\w)/g, '');
 
   return out.replace(/[ \t]{2,}/g, ' ').trim();
 }
