@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useReducer, useSpacetimeDB, useTable } from 'spacetimedb/react';
 import Chat from './components/Chat';
 import DevAdminModal from './components/DevAdminModal';
@@ -116,61 +116,136 @@ export default function App() {
   void specialChatRoles;
 
   // Permission bitflag constants (must match backend)
+  const PERM_VIEW_CHANNELS = 1n;
   const PERM_SEND_MESSAGES = 2n;
   const PERM_ADMINISTRATOR = 1024n;
 
-  // Compute the current user's combined permission bits per server.
-  // Keys are serverId.toString(); values are the OR of all role.permissions
-  // where the user has an assignment in that server.
-  const myPermissionsByServer = useMemo(() => {
-    const rolesById = new Map<string, bigint>();
+  // Role lookup helpers.
+  const rolePermById = useMemo(() => {
+    const byId = new Map<string, bigint>();
+    for (const r of serverRoles) byId.set(r.id.toString(), r.permissions);
+    return byId;
+  }, [serverRoles]);
+
+  const defaultRoleIdByServer = useMemo(() => {
+    const byServer = new Map<string, string>();
     for (const r of serverRoles) {
-      rolesById.set(r.id.toString(), r.permissions);
+      if (r.isDefault) byServer.set(r.serverId.toString(), r.id.toString());
     }
-    const result = new Map<string, bigint>();
+    return byServer;
+  }, [serverRoles]);
+
+  const defaultRolePermByServer = useMemo(() => {
+    const byServer = new Map<string, bigint>();
+    for (const r of serverRoles) {
+      if (r.isDefault) byServer.set(r.serverId.toString(), r.permissions);
+    }
+    return byServer;
+  }, [serverRoles]);
+
+  const myRoleIdsByServer = useMemo(() => {
+    const result = new Map<string, Set<string>>();
+    for (const m of allMembers) {
+      if (m.userIdentity.toHexString() !== myHex) continue;
+      result.set(m.serverId.toString(), new Set());
+    }
     for (const mr of memberRoles) {
       if (mr.userIdentity.toHexString() !== myHex) continue;
-      const perm = rolesById.get(mr.roleId.toString());
-      if (perm === undefined) continue;
       const key = mr.serverId.toString();
-      result.set(key, (result.get(key) ?? 0n) | perm);
+      if (!result.has(key)) continue;
+      result.get(key)!.add(mr.roleId.toString());
+    }
+    for (const [serverId, roleIds] of result) {
+      const defaultRoleId = defaultRoleIdByServer.get(serverId);
+      if (defaultRoleId) roleIds.add(defaultRoleId);
     }
     return result;
-  }, [serverRoles, memberRoles, myHex]);
+  }, [allMembers, memberRoles, myHex, defaultRoleIdByServer]);
+
+  // Compute the current user's combined permission bits per server.
+  // Keys are serverId.toString(); values are OR(role.permissions), including
+  // @everyone by default for each joined server.
+  const myPermissionsByServer = useMemo(() => {
+    const result = new Map<string, bigint>();
+    for (const [serverId, roleIds] of myRoleIdsByServer) {
+      let perms = defaultRolePermByServer.get(serverId) ?? 0n;
+      for (const roleId of roleIds) {
+        const perm = rolePermById.get(roleId);
+        if (perm !== undefined) perms |= perm;
+      }
+      result.set(serverId, perms);
+    }
+    return result;
+  }, [myRoleIdsByServer, defaultRolePermByServer, rolePermById]);
+
+  const getChannelEffectivePermissions = useCallback(
+    (channel: { id: bigint; serverId: bigint }): bigint => {
+      const myMembership = allMembers.find(
+        m => m.serverId === channel.serverId && m.userIdentity.toHexString() === myHex
+      );
+      if (!myMembership) return 0n;
+      if (myMembership.role === 'owner' || isSuperAdmin) return PERM_ADMINISTRATOR;
+
+      const serverIdKey = channel.serverId.toString();
+      const serverPerms = myPermissionsByServer.get(serverIdKey) ?? 0n;
+      if ((serverPerms & PERM_ADMINISTRATOR) !== 0n) return serverPerms;
+
+      const myRoleIds = myRoleIdsByServer.get(serverIdKey) ?? new Set<string>();
+      const everyoneRoleId = defaultRoleIdByServer.get(serverIdKey) ?? null;
+
+      let everyoneDeny = 0n;
+      let everyoneAllow = 0n;
+      let roleDeny = 0n;
+      let roleAllow = 0n;
+      let memberDeny = 0n;
+      let memberAllow = 0n;
+
+      for (const ov of channelPermissionOverrides) {
+        if (ov.channelId !== channel.id) continue;
+        if (ov.targetType === 'role') {
+          if (everyoneRoleId !== null && ov.targetId === everyoneRoleId) {
+            everyoneDeny |= ov.deny;
+            everyoneAllow |= ov.allow;
+          } else if (myRoleIds.has(ov.targetId)) {
+            roleDeny |= ov.deny;
+            roleAllow |= ov.allow;
+          }
+        } else if (ov.targetType === 'member' && ov.targetId === myHex) {
+          memberDeny |= ov.deny;
+          memberAllow |= ov.allow;
+        }
+      }
+
+      let perms = serverPerms;
+      perms = (perms & ~everyoneDeny) | everyoneAllow;
+      perms = (perms & ~roleDeny) | roleAllow;
+      perms = (perms & ~memberDeny) | memberAllow;
+      return perms;
+    },
+    [
+      allMembers,
+      myHex,
+      isSuperAdmin,
+      myPermissionsByServer,
+      myRoleIdsByServer,
+      defaultRoleIdByServer,
+      channelPermissionOverrides,
+    ]
+  );
+
+  const canViewInChannel = useCallback(
+    (channel: { id: bigint; serverId: bigint }): boolean => {
+      if (isSuperAdmin) return true;
+      const perms = getChannelEffectivePermissions(channel);
+      return (perms & PERM_VIEW_CHANNELS) !== 0n || (perms & PERM_ADMINISTRATOR) !== 0n;
+    },
+    [isSuperAdmin, getChannelEffectivePermissions]
+  );
 
   const canWriteInChannel = (channel: { id: bigint; serverId: bigint }): boolean => {
-    if (isSuperAdmin) return true;
-    const myMembership = allMembers.find(
-      m => m.serverId === channel.serverId && m.userIdentity.toHexString() === myHex
-    );
-    if (!myMembership) return false;
-    if (myMembership.role === 'owner') return true;
-    const serverPerms = myPermissionsByServer.get(channel.serverId.toString()) ?? 0n;
-    if ((serverPerms & PERM_ADMINISTRATOR) !== 0n) return true;
-
-    // Do NOT short-circuit here on server-level SEND_MESSAGES absence —
-    // a channel-level allow override can grant this permission even when the
-    // server base does not include it (mirrors Discord's resolution model).
-    // Apply channel-level permission overrides
-    const myRoleIds = new Set(
-      memberRoles
-        .filter(mr => mr.serverId === channel.serverId && mr.userIdentity.toHexString() === myHex)
-        .map(mr => mr.roleId.toString())
-    );
-    let roleDeny = 0n;
-    let roleAllow = 0n;
-    for (const ov of channelPermissionOverrides) {
-      if (ov.channelId !== channel.id) continue;
-      if (ov.targetType === 'role' && myRoleIds.has(ov.targetId)) {
-        roleDeny |= ov.deny;
-        roleAllow |= ov.allow;
-      } else if (ov.targetType === 'member' && ov.targetId === myHex) {
-        roleDeny |= ov.deny;
-        roleAllow |= ov.allow;
-      }
-    }
-    const effective = (serverPerms & ~roleDeny) | roleAllow;
-    return (effective & PERM_SEND_MESSAGES) !== 0n;
+    if (!canViewInChannel(channel)) return false;
+    const perms = getChannelEffectivePermissions(channel);
+    return (perms & PERM_SEND_MESSAGES) !== 0n || (perms & PERM_ADMINISTRATOR) !== 0n;
   };
 
   // Only show servers the current user has joined
@@ -206,8 +281,9 @@ export default function App() {
     () =>
       channels
         .filter(c => selectedServerId !== null && c.serverId === selectedServerId)
+        .filter(c => canViewInChannel(c))
         .sort((a, b) => a.position - b.position),
-    [channels, selectedServerId]
+    [channels, selectedServerId, canViewInChannel]
   );
 
   // Validate channel from URL — if missing or not in current server, auto-select first
@@ -303,6 +379,7 @@ export default function App() {
             // on /c/:serverId/:channelId with a single history entry.
             const first = channels
               .filter(c => c.serverId === id)
+              .filter(c => canViewInChannel(c))
               .sort((a, b) => a.position - b.position)[0];
             navigateTo(id, first?.id ?? null);
           }}
