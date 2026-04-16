@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   // the full seed-while-not-super path.
   if (isSuper()) {
     try {
-      await conn.reducers.revokeSuperAdminSelf();
+      await conn.reducers.revokeSuperAdminSelf({});
       console.log('  (revoked bootstrap super_admin to start clean)');
       await new Promise(r => setTimeout(r, 300));
     } catch {}
@@ -96,11 +96,11 @@ async function main(): Promise<void> {
     },
     {
       name: 'revoke_super_admin_self → ok',
-      fn: () => conn.reducers.revokeSuperAdminSelf(),
+      fn: () => conn.reducers.revokeSuperAdminSelf({}),
     },
     {
       name: 'revoke again (not super) → fails',
-      fn: () => conn.reducers.revokeSuperAdminSelf(),
+      fn: () => conn.reducers.revokeSuperAdminSelf({}),
       expectError: /not currently a super admin/i,
     },
     {
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
     {
       name: 'revoke and claim with OLD → fails',
       fn: async () => {
-        await conn.reducers.revokeSuperAdminSelf();
+        await conn.reducers.revokeSuperAdminSelf({});
         await new Promise(r => setTimeout(r, 200));
         await conn.reducers.claimSuperAdmin({ secret: SECRET_GOOD });
       },
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
   // session can auto-claim super_admin via clientConnected bootstrap.
   if (isSuper()) {
     try {
-      await conn.reducers.revokeSuperAdminSelf();
+      await conn.reducers.revokeSuperAdminSelf({});
       console.log('\n(bot revoked for clean exit)');
     } catch {}
   }
