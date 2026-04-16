@@ -20,6 +20,8 @@ import type { MessagePoint, QdrantStore } from './qdrant.ts';
 
 export class Ingester {
   private backfilled = new Set<string>(); // server IDs we've already backfilled this session
+  private backfillInFlight = new Set<string>();
+  private backfillQueued = new Set<string>();
 
   constructor(
     private conn: DbConnection,
@@ -145,57 +147,71 @@ export class Ingester {
 
   private async backfillServer(serverId: bigint): Promise<void> {
     const key = serverId.toString();
-    if (this.backfilled.has(key)) return;
-    this.backfilled.add(key);
-
-    // Ensure the bot is a member of this server before anything else.
-    await this.ensureBotMember(serverId);
-
-    // Collect every human message in this server.
-    const batch: Message[] = [];
-    for (const m of this.conn.db.message.iter()) {
-      if (m.authorId.toHexString() === this.botIdentityHex) continue;
-      const ch = this.conn.db.channel.id.find(m.channelId);
-      if (!ch || ch.serverId !== serverId) continue;
-      const allowed = this.allowedChannels(serverId);
-      if (allowed !== null && !allowed.has(m.channelId.toString())) continue;
-      const chAiCfg = this.conn.db.channel_ai_config.channelId.find(m.channelId);
-      if (chAiCfg) {
-        if (!chAiCfg.indexingEnabled) continue;
-      } else {
-        const srvCfg = this.conn.db.ai_config.serverId.find(serverId);
-        if (srvCfg && !srvCfg.indexingEnabledByDefault) continue;
-      }
-      batch.push(m);
-    }
-    if (batch.length === 0) {
-      console.log(`[ingest] server ${serverId}: no human messages to backfill`);
+    if (this.backfillInFlight.has(key)) {
+      this.backfillQueued.add(key);
       return;
     }
-    console.log(`[ingest] server ${serverId}: backfilling ${batch.length} messages`);
-    const CHUNK = 32;
-    for (let i = 0; i < batch.length; i += CHUNK) {
-      const slice = batch.slice(i, i + CHUNK);
-      const kept: Array<{ msg: Message; text: string }> = [];
-      for (const msg of slice) {
-        const text = this.trim(msg.text);
-        if (text.length > 0) kept.push({ msg, text });
+
+    this.backfillInFlight.add(key);
+    try {
+      if (this.backfilled.has(key)) return;
+      this.backfilled.add(key);
+
+      // Ensure the bot is a member of this server before anything else.
+      await this.ensureBotMember(serverId);
+
+      // Collect every human message in this server.
+      const batch: Message[] = [];
+      for (const m of this.conn.db.message.iter()) {
+        if (m.authorId.toHexString() === this.botIdentityHex) continue;
+        const ch = this.conn.db.channel.id.find(m.channelId);
+        if (!ch || ch.serverId !== serverId) continue;
+        const allowed = this.allowedChannels(serverId);
+        if (allowed !== null && !allowed.has(m.channelId.toString())) continue;
+        const chAiCfg = this.conn.db.channel_ai_config.channelId.find(m.channelId);
+        if (chAiCfg) {
+          if (!chAiCfg.indexingEnabled) continue;
+        } else {
+          const srvCfg = this.conn.db.ai_config.serverId.find(serverId);
+          if (srvCfg && !srvCfg.indexingEnabledByDefault) continue;
+        }
+        batch.push(m);
       }
-      if (kept.length === 0) continue;
-      try {
-        const vectors = await this.llm.embedBatch(kept.map(k => k.text));
-        await this.qdrant.upsertMany(
-          kept.map((k, idx) => ({
-            point: this.toPoint(k.msg, serverId),
-            vector: vectors[idx]!,
-          }))
-        );
-        console.log(
-          `[ingest] server ${serverId}: backfilled ${Math.min(i + CHUNK, batch.length)}/${batch.length}`
-        );
-      } catch (err) {
-        console.error(`[ingest] server ${serverId}: backfill chunk failed:`, err);
-        await new Promise(r => setTimeout(r, 1000));
+      if (batch.length === 0) {
+        console.log(`[ingest] server ${serverId}: no human messages to backfill`);
+        return;
+      }
+      console.log(`[ingest] server ${serverId}: backfilling ${batch.length} messages`);
+      const CHUNK = 32;
+      for (let i = 0; i < batch.length; i += CHUNK) {
+        const slice = batch.slice(i, i + CHUNK);
+        const kept: Array<{ msg: Message; text: string }> = [];
+        for (const msg of slice) {
+          const text = this.trim(msg.text);
+          if (text.length > 0) kept.push({ msg, text });
+        }
+        if (kept.length === 0) continue;
+        try {
+          const vectors = await this.llm.embedBatch(kept.map(k => k.text));
+          await this.qdrant.upsertMany(
+            kept.map((k, idx) => ({
+              point: this.toPoint(k.msg, serverId),
+              vector: vectors[idx]!,
+            }))
+          );
+          console.log(
+            `[ingest] server ${serverId}: backfilled ${Math.min(i + CHUNK, batch.length)}/${batch.length}`
+          );
+        } catch (err) {
+          console.error(`[ingest] server ${serverId}: backfill chunk failed:`, err);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+    } finally {
+      this.backfillInFlight.delete(key);
+      if (this.backfillQueued.delete(key)) {
+        this.backfilled.delete(key);
+        void this.backfillServer(serverId);
       }
     }
   }
