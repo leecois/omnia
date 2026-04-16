@@ -14,7 +14,7 @@
 // Failures are captured via failAskRequest so the UI can surface them.
 
 import type { DbConnection } from '../../src/module_bindings/index.ts';
-import type { AskRequest, Message } from '../../src/module_bindings/types.ts';
+import type { AiConfig, AskRequest, Message } from '../../src/module_bindings/types.ts';
 import type { BotConfig } from './config.ts';
 import type { LLMAdapter } from './llm.ts';
 import type { QdrantStore } from './qdrant.ts';
@@ -51,6 +51,28 @@ export class RAGHandler {
     } catch {
       // Idempotent — ignore "already a member" races.
     }
+  }
+
+  private allowedChannels(sourceChannelIds: string): Set<string> | null {
+    const raw = sourceChannelIds.trim();
+    if (raw === '') return null;
+    return new Set(
+      raw
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+    );
+  }
+
+  private isChannelSearchEnabled(
+    cfg: AiConfig,
+    channelId: bigint,
+    allowedChannels: Set<string> | null
+  ): boolean {
+    if (allowedChannels !== null && !allowedChannels.has(channelId.toString())) return false;
+    const chCfg = this.conn.db.channel_ai_config.channelId.find(channelId);
+    if (chCfg) return chCfg.indexingEnabled;
+    return cfg.indexingEnabledByDefault;
   }
 
   /** Scan existing pending rows on startup, then watch for new inserts. */
@@ -102,6 +124,7 @@ export class RAGHandler {
     if (!cfg || !cfg.enabled || !cfg.askEnabled) {
       throw new Error('AI assistant disabled for this server');
     }
+    const allowedChannels = this.allowedChannels(cfg.sourceChannelIds);
 
     // 1. Embed the question.
     const qVec = await this.llm.embed(req.question);
@@ -119,6 +142,9 @@ export class RAGHandler {
       const msgId = BigInt(hit.point.messageId);
       const msg = this.conn.db.message.id.find(msgId);
       if (msg) {
+        const channel = this.conn.db.channel.id.find(msg.channelId);
+        if (!channel || channel.serverId !== req.serverId) continue;
+        if (!this.isChannelSearchEnabled(cfg, msg.channelId, allowedChannels)) continue;
         contexts.push({ rank: contexts.length + 1, msg, score: hit.score });
         if (totalChars(contexts) >= this.cfg.maxContextChars) break;
       }
