@@ -723,18 +723,39 @@ function getMemberPermissions(
 ): bigint {
   const hexStr = identity.toHexString();
 
+  // Membership is required for permission resolution.
+  let isMember = false;
+  for (const m of ctx.db.server_member.byServerId.filter(serverId)) {
+    if ((m.userIdentity as { toHexString(): string }).toHexString() === hexStr) {
+      isMember = true;
+      break;
+    }
+  }
+  if (!isMember) return 0n;
+
+  // @everyone applies to all server members even if legacy data is missing
+  // an explicit member_role assignment.
+  let defaultRoleId: bigint | null = null;
+  for (const r of ctx.db.server_role.byServerId.filter(serverId)) {
+    if (r.isDefault === true) {
+      defaultRoleId = r.id as bigint;
+      break;
+    }
+  }
+
   // Collect role IDs assigned to this user in this server
-  const roleIds: bigint[] = [];
+  const roleIds = new Set<bigint>();
+  if (defaultRoleId !== null) roleIds.add(defaultRoleId);
   for (const mr of ctx.db.member_role.byServerId.filter(serverId)) {
     if ((mr.userIdentity as { toHexString(): string }).toHexString() === hexStr) {
-      roleIds.push(mr.roleId as bigint);
+      roleIds.add(mr.roleId as bigint);
     }
   }
 
   // OR permissions from each role
   let perms = 0n;
   for (const r of ctx.db.server_role.byServerId.filter(serverId)) {
-    if (roleIds.includes(r.id as bigint)) {
+    if (roleIds.has(r.id as bigint)) {
       perms = perms | (r.permissions as bigint);
     }
   }
@@ -766,6 +787,15 @@ function getChannelEffectivePermissions(
 
   const hexStr = identity.toHexString();
 
+  let everyoneRoleId: bigint | null = null;
+  for (const r of ctx.db.server_role.byServerId.filter(serverId)) {
+    if (r.isDefault === true) {
+      everyoneRoleId = r.id as bigint;
+      break;
+    }
+  }
+  const everyoneRoleIdStr = everyoneRoleId !== null ? everyoneRoleId.toString() : null;
+
   // Collect role IDs assigned to this user in this server
   const roleIdStrs = new Set<string>();
   for (const mr of ctx.db.member_role.byServerId.filter(serverId)) {
@@ -773,16 +803,25 @@ function getChannelEffectivePermissions(
       roleIdStrs.add((mr.roleId as bigint).toString());
     }
   }
+  if (everyoneRoleIdStr !== null) roleIdStrs.add(everyoneRoleIdStr);
 
+  let everyoneDeny = 0n;
+  let everyoneAllow = 0n;
   let roleDeny = 0n;
   let roleAllow = 0n;
   let memberDeny = 0n;
   let memberAllow = 0n;
 
   for (const ov of ctx.db.channel_permission_override.byChannelId.filter(channelId)) {
-    if ((ov.targetType as string) === 'role' && roleIdStrs.has(ov.targetId as string)) {
-      roleDeny |= ov.deny as bigint;
-      roleAllow |= ov.allow as bigint;
+    if ((ov.targetType as string) === 'role') {
+      const targetId = ov.targetId as string;
+      if (everyoneRoleIdStr !== null && targetId === everyoneRoleIdStr) {
+        everyoneDeny |= ov.deny as bigint;
+        everyoneAllow |= ov.allow as bigint;
+      } else if (roleIdStrs.has(targetId)) {
+        roleDeny |= ov.deny as bigint;
+        roleAllow |= ov.allow as bigint;
+      }
     } else if ((ov.targetType as string) === 'member' && (ov.targetId as string) === hexStr) {
       memberDeny |= ov.deny as bigint;
       memberAllow |= ov.allow as bigint;
@@ -790,9 +829,49 @@ function getChannelEffectivePermissions(
   }
 
   let perms = basePerm;
+  perms = (perms & ~everyoneDeny) | everyoneAllow;
   perms = (perms & ~roleDeny) | roleAllow;
   perms = (perms & ~memberDeny) | memberAllow;
   return perms;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function requireChannelPermission(
+  ctx: any,
+  channelId: bigint,
+  requiredFlag: bigint,
+  action: string
+): any {
+  const chn = ctx.db.channel.id.find(channelId);
+  if (!chn) throw new SenderError('Channel not found');
+  const member = requireMember(ctx, chn.serverId);
+
+  if (isSuperAdmin(ctx, ctx.sender) || member.role === 'owner') {
+    return chn;
+  }
+
+  const perms = getChannelEffectivePermissions(ctx, channelId, chn.serverId, ctx.sender);
+  if (!hasPerm(perms, PERM_VIEW_CHANNELS)) {
+    throw new SenderError("You don't have permission to view this channel");
+  }
+  if (!hasPerm(perms, requiredFlag)) {
+    throw new SenderError(`You don't have permission to ${action} in this channel`);
+  }
+  return chn;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function requireViewChannelAccess(ctx: any, channelId: bigint): any {
+  const chn = ctx.db.channel.id.find(channelId);
+  if (!chn) throw new SenderError('Channel not found');
+  const member = requireMember(ctx, chn.serverId);
+  if (isSuperAdmin(ctx, ctx.sender) || member.role === 'owner') return chn;
+
+  const perms = getChannelEffectivePermissions(ctx, channelId, chn.serverId, ctx.sender);
+  if (!hasPerm(perms, PERM_VIEW_CHANNELS)) {
+    throw new SenderError("You don't have permission to view this channel");
+  }
+  return chn;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -920,6 +999,11 @@ export const leave_server = spacetimedb.reducer({ serverId: t.u64() }, (ctx, { s
   }
   for (const m of ctx.db.server_member.byServerId.filter(serverId)) {
     if (m.userIdentity.toHexString() === ctx.sender.toHexString()) {
+      for (const mr of ctx.db.member_role.byServerId.filter(serverId)) {
+        if (mr.userIdentity.toHexString() === ctx.sender.toHexString()) {
+          ctx.db.member_role.id.delete(mr.id);
+        }
+      }
       ctx.db.server_member.id.delete(m.id);
       return;
     }
@@ -1025,6 +1109,11 @@ export const kick_member = spacetimedb.reducer(
     }
     for (const m of ctx.db.server_member.byServerId.filter(serverId)) {
       if (m.userIdentity.toHexString() === userIdentity.toHexString()) {
+        for (const mr of ctx.db.member_role.byServerId.filter(serverId)) {
+          if (mr.userIdentity.toHexString() === userIdentity.toHexString()) {
+            ctx.db.member_role.id.delete(mr.id);
+          }
+        }
         ctx.db.server_member.id.delete(m.id);
         return;
       }
@@ -1398,19 +1487,7 @@ export const send_message = spacetimedb.reducer(
     if (!trimmed && !attachmentUrl) throw new SenderError('Message cannot be empty');
     if (trimmed.length > 2000) throw new SenderError('Message too long (2000 char max)');
 
-    const chn = ctx.db.channel.id.find(channelId);
-    if (!chn) throw new SenderError('Channel not found');
-    const senderMember = requireMember(ctx, chn.serverId);
-
-    // Permission check: Super Admins, server owners, and users whose
-    // combined roles include SEND_MESSAGES (or ADMINISTRATOR) may post.
-    // The server owner always has full access.
-    if (!isSuperAdmin(ctx, ctx.sender) && senderMember.role !== 'owner') {
-      const perms = getChannelEffectivePermissions(ctx, channelId, chn.serverId, ctx.sender);
-      if (!hasPerm(perms, PERM_SEND_MESSAGES)) {
-        throw new SenderError("You don't have permission to send messages in this channel");
-      }
-    }
+    const chn = requireChannelPermission(ctx, channelId, PERM_SEND_MESSAGES, 'send messages');
 
     if (threadId !== 0n) {
       const th = ctx.db.thread.id.find(threadId);
@@ -1498,8 +1575,13 @@ export const delete_message = spacetimedb.reducer({ messageId: t.u64() }, (ctx, 
   const chn = ctx.db.channel.id.find(msg.channelId);
   let canDelete = msg.authorId.toHexString() === ctx.sender.toHexString();
   if (!canDelete && chn) {
-    const member = getMember(ctx, chn.serverId);
-    canDelete = member !== undefined && isPrivileged(member.role);
+    const member = requireMember(ctx, chn.serverId);
+    if (isSuperAdmin(ctx, ctx.sender) || member.role === 'owner') {
+      canDelete = true;
+    } else {
+      const perms = getChannelEffectivePermissions(ctx, chn.id, chn.serverId, ctx.sender);
+      canDelete = hasPerm(perms, PERM_VIEW_CHANNELS) && hasPerm(perms, PERM_MANAGE_MESSAGES);
+    }
   }
   if (!canDelete) throw new SenderError('Cannot delete this message');
   ctx.db.message.id.delete(messageId);
@@ -1516,7 +1598,7 @@ export const create_thread = spacetimedb.reducer(
     if (!trimmed) throw new SenderError('Thread name is required');
     const parent = ctx.db.message.id.find(parentMessageId);
     if (!parent) throw new SenderError('Parent message not found');
-    requireMember(ctx, ctx.db.channel.id.find(parent.channelId)!.serverId);
+    requireChannelPermission(ctx, parent.channelId, PERM_SEND_MESSAGES, 'create threads');
     const existing = [...ctx.db.thread.byParentId.filter(parentMessageId)];
     if (existing.length > 0) throw new SenderError('Thread already exists for this message');
     ctx.db.thread.insert({
@@ -1539,8 +1621,7 @@ export const toggle_reaction = spacetimedb.reducer(
   (ctx, { messageId, emoji }) => {
     const msg = ctx.db.message.id.find(messageId);
     if (!msg) throw new SenderError('Message not found');
-    const chn = ctx.db.channel.id.find(msg.channelId);
-    if (chn) requireMember(ctx, chn.serverId);
+    requireChannelPermission(ctx, msg.channelId, PERM_ADD_REACTIONS, 'add reactions');
     for (const r of ctx.db.reaction.byMessageId.filter(messageId)) {
       if (r.emoji === emoji && r.userIdentity.toHexString() === ctx.sender.toHexString()) {
         ctx.db.reaction.id.delete(r.id);
@@ -1562,9 +1643,7 @@ export const toggle_reaction = spacetimedb.reducer(
 // ============================================================================
 
 export const set_typing = spacetimedb.reducer({ channelId: t.u64() }, (ctx, { channelId }) => {
-  const chn = ctx.db.channel.id.find(channelId);
-  if (!chn) throw new SenderError('Channel not found');
-  requireMember(ctx, chn.serverId);
+  requireChannelPermission(ctx, channelId, PERM_SEND_MESSAGES, 'type');
   const existing = ctx.db.typing.userIdentity.find(ctx.sender);
   if (existing) {
     ctx.db.typing.userIdentity.update({ ...existing, channelId, startedAt: ctx.timestamp });
@@ -1580,6 +1659,7 @@ export const set_typing = spacetimedb.reducer({ channelId: t.u64() }, (ctx, { ch
 export const update_read_state = spacetimedb.reducer(
   { channelId: t.u64(), lastMessageId: t.u64() },
   (ctx, { channelId, lastMessageId }) => {
+    requireViewChannelAccess(ctx, channelId);
     for (const rs of ctx.db.read_state.byUserIdentity.filter(ctx.sender)) {
       if (rs.channelId === channelId) {
         if (rs.lastReadMessageId < lastMessageId) {
@@ -1730,9 +1810,7 @@ export const pin_message = spacetimedb.reducer({ messageId: t.u64() }, (ctx, { m
   const msg = ctx.db.message.id.find(messageId);
   if (!msg) throw new SenderError('Message not found');
   if (msg.threadId !== 0n) throw new SenderError('Cannot pin thread replies');
-  const chn = ctx.db.channel.id.find(msg.channelId);
-  if (!chn) throw new SenderError('Channel not found');
-  requireMember(ctx, chn.serverId);
+  requireChannelPermission(ctx, msg.channelId, PERM_MANAGE_MESSAGES, 'manage messages');
   if (msg.pinned) return;
   ctx.db.message.id.update({ ...msg, pinned: true });
 });
@@ -1740,9 +1818,7 @@ export const pin_message = spacetimedb.reducer({ messageId: t.u64() }, (ctx, { m
 export const unpin_message = spacetimedb.reducer({ messageId: t.u64() }, (ctx, { messageId }) => {
   const msg = ctx.db.message.id.find(messageId);
   if (!msg) throw new SenderError('Message not found');
-  const chn = ctx.db.channel.id.find(msg.channelId);
-  if (!chn) throw new SenderError('Channel not found');
-  requireMember(ctx, chn.serverId);
+  requireChannelPermission(ctx, msg.channelId, PERM_MANAGE_MESSAGES, 'manage messages');
   if (!msg.pinned) return;
   ctx.db.message.id.update({ ...msg, pinned: false });
 });
@@ -1933,11 +2009,9 @@ export const create_ask_request = spacetimedb.reducer(
       throw new SenderError('Monthly AI token budget exhausted');
     }
 
-    // Require the user to be a member of the server and able to view channels.
-    const perms = getMemberPermissions(ctx, serverId, ctx.sender);
-    if (!hasPerm(perms, PERM_VIEW_CHANNELS) && !isSuperAdmin(ctx, ctx.sender)) {
-      throw new SenderError('You are not a member of this server');
-    }
+    // Require channel-level view access (includes server membership +
+    // server perms + channel override hierarchy).
+    requireViewChannelAccess(ctx, channelId);
 
     // Post the question as a real message in the channel so:
     //   1. Everyone can see what was asked (not just the asker)
@@ -2051,40 +2125,37 @@ export const fail_ask_request = spacetimedb.reducer(
 // which requires a server_member row. This reducer lets the bot self-register
 // as a 'bot' member. Guard: ai_config.enabled must be true for the server.
 
-export const join_as_bot = spacetimedb.reducer(
-  { serverId: t.u64() },
-  (ctx, { serverId }) => {
-    const srv = ctx.db.server.id.find(serverId);
-    if (!srv) throw new SenderError('Server not found');
+export const join_as_bot = spacetimedb.reducer({ serverId: t.u64() }, (ctx, { serverId }) => {
+  const srv = ctx.db.server.id.find(serverId);
+  if (!srv) throw new SenderError('Server not found');
 
-    const cfg = ctx.db.ai_config.serverId.find(serverId);
-    if (!cfg || !cfg.enabled) {
-      throw new SenderError('AI is not enabled on this server');
-    }
-
-    // Idempotent — skip if already a member.
-    if (getMember(ctx, serverId)) return;
-
-    ctx.db.server_member.insert({
-      id: 0n,
-      serverId,
-      userIdentity: ctx.sender,
-      nickname: 'Omnia AI',
-      role: 'bot',
-      joinedAt: ctx.timestamp,
-    });
-
-    // Assign the @everyone role so permission checks pass.
-    const roleId = ensureDefaultRole(ctx, serverId, isDefaultServer(serverId));
-    ctx.db.member_role.insert({
-      id: 0n,
-      serverId,
-      userIdentity: ctx.sender,
-      roleId,
-      assignedAt: ctx.timestamp,
-    });
+  const cfg = ctx.db.ai_config.serverId.find(serverId);
+  if (!cfg || !cfg.enabled) {
+    throw new SenderError('AI is not enabled on this server');
   }
-);
+
+  // Idempotent — skip if already a member.
+  if (getMember(ctx, serverId)) return;
+
+  ctx.db.server_member.insert({
+    id: 0n,
+    serverId,
+    userIdentity: ctx.sender,
+    nickname: 'Omnia AI',
+    role: 'bot',
+    joinedAt: ctx.timestamp,
+  });
+
+  // Assign the @everyone role so permission checks pass.
+  const roleId = ensureDefaultRole(ctx, serverId, isDefaultServer(serverId));
+  ctx.db.member_role.insert({
+    id: 0n,
+    serverId,
+    userIdentity: ctx.sender,
+    roleId,
+    assignedAt: ctx.timestamp,
+  });
+});
 
 // ============================================================================
 // CHANNEL AI CONFIG REDUCER
@@ -2112,13 +2183,28 @@ export const set_channel_ai_config = spacetimedb.reducer(
     const validRoles = ['general', 'documentation', 'changelog', 'qa', 'support', 'announcements'];
     if (!validRoles.includes(roleLabel)) throw new SenderError('Invalid role label');
     if (authorityWeight > 3) throw new SenderError('Authority weight must be 0-3');
-    if (pinnedContext.length > 500) throw new SenderError('Pinned context must be 500 characters or fewer');
+    if (pinnedContext.length > 500)
+      throw new SenderError('Pinned context must be 500 characters or fewer');
 
     const existing = ctx.db.channel_ai_config.channelId.find(channelId);
     if (existing) {
-      ctx.db.channel_ai_config.channelId.update({ ...existing, indexingEnabled, roleLabel, authorityWeight, pinnedContext, updatedAt: ctx.timestamp });
+      ctx.db.channel_ai_config.channelId.update({
+        ...existing,
+        indexingEnabled,
+        roleLabel,
+        authorityWeight,
+        pinnedContext,
+        updatedAt: ctx.timestamp,
+      });
     } else {
-      ctx.db.channel_ai_config.insert({ channelId, indexingEnabled, roleLabel, authorityWeight, pinnedContext, updatedAt: ctx.timestamp });
+      ctx.db.channel_ai_config.insert({
+        channelId,
+        indexingEnabled,
+        roleLabel,
+        authorityWeight,
+        pinnedContext,
+        updatedAt: ctx.timestamp,
+      });
     }
   }
 );
