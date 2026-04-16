@@ -18,12 +18,20 @@ import type { BotConfig } from './config.ts';
 import type { LLMAdapter } from './llm.ts';
 import type { MessagePoint, QdrantStore } from './qdrant.ts';
 
+type BackfillTriggerReason =
+  | 'ai_config_enabled'
+  | 'ai_config_insert_enabled'
+  | 'ai_config_scope_changed'
+  | 'channel_override_enabled_insert'
+  | 'channel_override_enabled_update'
+  | 'channel_override_reset_default_enabled';
+
 export class Ingester {
   private backfilled = new Set<string>(); // server IDs we've already backfilled this session
   private backfillInFlight = new Set<string>();
   private backfillQueued = new Set<string>();
   private backfillQueueCountByServer = new Map<string, number>();
-  private backfillTriggerCountByReason = new Map<string, number>();
+  private backfillTriggerCountByReason = new Map<BackfillTriggerReason, number>();
 
   constructor(
     private conn: DbConnection,
@@ -153,9 +161,11 @@ export class Ingester {
       this.backfillQueued.add(key);
       const queued = (this.backfillQueueCountByServer.get(key) ?? 0) + 1;
       this.backfillQueueCountByServer.set(key, queued);
-      console.log(
-        `[ingest] backfill already running for server ${serverId}, queued rerun #${queued}`
-      );
+      if (queued === 1 || queued % 10 === 0) {
+        console.log(
+          `[ingest] backfill already running for server ${serverId}, queued rerun #${queued}`
+        );
+      }
       return;
     }
 
@@ -276,12 +286,18 @@ export class Ingester {
     }
   }
 
-  private triggerServerBackfill(serverId: bigint, reason: string): void {
+  private triggerServerBackfill(
+    serverId: bigint,
+    reason: BackfillTriggerReason,
+    detail?: string
+  ): void {
     this.backfilled.delete(serverId.toString());
     const count = (this.backfillTriggerCountByReason.get(reason) ?? 0) + 1;
     this.backfillTriggerCountByReason.set(reason, count);
-    console.log(`[ingest] ${reason} for server ${serverId}, starting backfill`);
-    console.log(`[ingest] trigger stats: reason="${reason}" count=${count}`);
+    const suffix = detail ? ` detail="${detail}"` : '';
+    console.log(
+      `[ingest] backfill trigger reason="${reason}" server=${serverId} count=${count}${suffix}`
+    );
     void this.backfillServer(serverId);
   }
 
@@ -301,7 +317,7 @@ export class Ingester {
     // serverId so onUpdate is exposed.
     this.conn.db.ai_config.onUpdate((_ctx, oldRow, newRow) => {
       if (!oldRow.enabled && newRow.enabled) {
-        this.triggerServerBackfill(newRow.serverId, 'ai_config enabled');
+        this.triggerServerBackfill(newRow.serverId, 'ai_config_enabled');
         return;
       }
       if (oldRow.enabled && !newRow.enabled) {
@@ -315,12 +331,12 @@ export class Ingester {
         oldRow.sourceChannelIds !== newRow.sourceChannelIds ||
         oldRow.indexingEnabledByDefault !== newRow.indexingEnabledByDefault;
       if (newRow.enabled && scopeChanged) {
-        this.triggerServerBackfill(newRow.serverId, 'ai_config indexing scope changed');
+        this.triggerServerBackfill(newRow.serverId, 'ai_config_scope_changed');
       }
     });
     this.conn.db.ai_config.onInsert((_ctx, row) => {
       if (row.enabled) {
-        this.triggerServerBackfill(row.serverId, 'ai_config inserted already-enabled');
+        this.triggerServerBackfill(row.serverId, 'ai_config_insert_enabled');
       }
     });
 
@@ -333,7 +349,8 @@ export class Ingester {
       if (!ch) return;
       this.triggerServerBackfill(
         ch.serverId,
-        `channel_ai_config enabled on channel ${row.channelId}`
+        'channel_override_enabled_insert',
+        `channel=${row.channelId}`
       );
     });
     this.conn.db.channel_ai_config.onUpdate((_ctx, oldRow, newRow) => {
@@ -342,7 +359,8 @@ export class Ingester {
       if (!ch) return;
       this.triggerServerBackfill(
         ch.serverId,
-        `channel_ai_config changed to enabled on channel ${newRow.channelId}`
+        'channel_override_enabled_update',
+        `channel=${newRow.channelId}`
       );
     });
     this.conn.db.channel_ai_config.onDelete((_ctx, row) => {
@@ -352,7 +370,8 @@ export class Ingester {
       if (!cfg || !cfg.enabled || !cfg.indexingEnabledByDefault) return;
       this.triggerServerBackfill(
         ch.serverId,
-        `channel_ai_config reset on channel ${row.channelId} (fallback enabled)`
+        'channel_override_reset_default_enabled',
+        `channel=${row.channelId}`
       );
     });
   }
