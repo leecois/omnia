@@ -5,7 +5,7 @@
 //   2. Vector-search Qdrant filtered by the requesting server's ID.
 //   3. Fetch the matching messages from SpacetimeDB's local cache (they
 //      are already synced via our subscription).
-//   4. Build a prompt with [1] [2] ... citation markers.
+//   4. Build a prompt with relevant context snippets.
 //   5. Call the LLM chat completion endpoint.
 //   6. Post the answer as a regular message via sendMessage reducer.
 //   7. Call resolveAskRequest to flip the row's status to 'answered'
@@ -23,11 +23,11 @@ const SYSTEM_PROMPT = `You are Omnia, a helpful documentation assistant for a ch
 You answer questions grounded in the provided context snippets from the community.
 
 RULES:
-- Cite sources inline with [N] markers matching the context numbering.
 - If the context doesn't contain the answer, say so politely — do NOT guess.
 - Keep answers concise (≤ 6 sentences unless the question clearly needs detail).
 - Respond in the same language as the question.
-- Use markdown formatting (lists, code blocks) when it aids clarity.`;
+- Use markdown formatting (lists, code blocks) when it aids clarity.
+- Do NOT include citations, source links, or a "Sources" section in the response.`;
 
 export class RAGHandler {
   private processing = new Set<string>();
@@ -143,7 +143,7 @@ export class RAGHandler {
 
     // 3. Resolve hits against the local SpacetimeDB cache. If a point is
     //    stale (message deleted), skip it.
-    const contexts: Array<{ rank: number; msg: Message; score: number }> = [];
+    const contexts: Array<{ msg: Message; score: number }> = [];
     const filterStats = {
       total: hits.length,
       accepted: 0,
@@ -172,7 +172,7 @@ export class RAGHandler {
         filterStats.policyDenied++;
         continue;
       }
-      contexts.push({ rank: contexts.length + 1, msg, score: hit.score });
+      contexts.push({ msg, score: hit.score });
       filterStats.accepted++;
       if (totalChars(contexts) >= this.cfg.maxContextChars) break;
     }
@@ -216,7 +216,7 @@ export class RAGHandler {
 
     // 4. Build the prompt.
     const contextBlock = contexts
-      .map(c => `[${c.rank}] (${fmtDate(c.msg.sent.microsSinceUnixEpoch)}) ${c.msg.text.trim()}`)
+      .map(c => `- (${fmtDate(c.msg.sent.microsSinceUnixEpoch)}) ${c.msg.text.trim()}`)
       .join('\n\n');
 
     const userPrompt = `QUESTION:\n${req.question}\n\nCONTEXT:\n${contextBlock}`;
@@ -242,17 +242,8 @@ export class RAGHandler {
     // 5. Call the LLM.
     const res = await this.llm.chat(systemPrompt, userPrompt);
 
-    // 6. Append a citations footer with deep-links to each source message.
-    // Path format: /c/:serverId/:channelId/:messageId (matches useRoute.ts)
-    const citations = contexts
-      .map(c => {
-        const chCfg = this.conn.db.channel_ai_config.channelId.find(c.msg.channelId);
-        const roleLabel = chCfg?.roleLabel ?? 'general';
-        const roleSuffix = roleLabel !== 'general' ? ` (${roleLabel})` : '';
-        return `[[${c.rank}]](/c/${req.serverId}/${c.msg.channelId}/${c.msg.id})${roleSuffix}`;
-      })
-      .join('  ');
-    const answerText = `${res.text}\n\n_Sources: ${citations}_`;
+    // 6. Keep output clean: no citation markers or trailing source footer.
+    const answerText = stripSourceMentions(res.text);
 
     // 7. Ensure the bot is a member before posting (no-op if already joined).
     await this.ensureBotMember(req.serverId);
@@ -310,4 +301,18 @@ function totalChars(contexts: Array<{ msg: Message }>): number {
 function fmtDate(micros: bigint): string {
   const ms = Number(micros / 1000n);
   return new Date(ms).toISOString().slice(0, 10);
+}
+
+function stripSourceMentions(text: string): string {
+  let out = text.trim();
+
+  // Remove explicit source/footer sections.
+  out = out.replace(/\n{0,2}_?\s*sources?\s*:[\s\S]*$/im, '').trim();
+  out = out.replace(/\n{0,2}_?\s*nguồn\s*:[\s\S]*$/im, '').trim();
+
+  // Remove inline citation markers like [1], [12], [[3]](/link).
+  out = out.replace(/\[\[(\d+)\]\]\([^)]*\)/g, '');
+  out = out.replace(/\[(\d+)\]/g, '');
+
+  return out.replace(/[ \t]{2,}/g, ' ').trim();
 }
