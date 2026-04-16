@@ -312,10 +312,13 @@ function stripSourceMentions(text: string): string {
   out = out.replace(/\n{0,2}_?\s*references?\s*:[\s\S]*$/im, '').trim();
   out = out.replace(/\n{0,2}_?\s*nguồn\s*:[\s\S]*$/im, '').trim();
   out = out.replace(/\n{0,2}_?\s*tài\s*liệu\s*tham\s*khảo\s*:[\s\S]*$/im, '').trim();
+  out = out.replace(/\n{0,2}_?\s*nguồn\s*tham\s*khảo\s*:[\s\S]*$/im, '').trim();
 
   // Remove inline citation markers like [1], [12], [[3]](/link).
   out = out.replace(/\[\[(\d+)\]\]\([^)]*\)/g, '');
   out = out.replace(/(?<![\w\]])\[(\d{1,2})\](?!\w)/g, '');
+  out = out.replace(/\[\^(\d{1,2})\]/g, '');
+  out = out.replace(/cite[^]*/g, '');
 
   // Remove explicit provenance lead-ins.
   out = out.replace(
@@ -324,6 +327,14 @@ function stripSourceMentions(text: string): string {
   );
   out = out.replace(
     /\b(dựa\s+trên|theo)\s+(ngữ\s*cảnh|nguồn|tài\s*liệu|thông\s*tin)(\s+(được\s*cung\s*cấp|đã\s*cung\s*cấp|truy\s*xuất))?\b[:,]?\s*/gi,
+    ''
+  );
+  out = out.replace(
+    /\b(from|using|with)\s+(the\s+)?(provided|retrieved|given|above)\s+(context|information|docs?|documents?)\b[:,]?\s*/gi,
+    ''
+  );
+  out = out.replace(
+    /\b(với|từ)\s+(thông\s*tin|ngữ\s*cảnh|tài\s*liệu)(\s+(được\s*cung\s*cấp|đã\s*cung\s*cấp|ở\s*trên))?\b[:,]?\s*/gi,
     ''
   );
 
