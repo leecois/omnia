@@ -22,6 +22,8 @@ export class Ingester {
   private backfilled = new Set<string>(); // server IDs we've already backfilled this session
   private backfillInFlight = new Set<string>();
   private backfillQueued = new Set<string>();
+  private backfillQueueCountByServer = new Map<string, number>();
+  private backfillTriggerCountByReason = new Map<string, number>();
 
   constructor(
     private conn: DbConnection,
@@ -149,6 +151,11 @@ export class Ingester {
     const key = serverId.toString();
     if (this.backfillInFlight.has(key)) {
       this.backfillQueued.add(key);
+      const queued = (this.backfillQueueCountByServer.get(key) ?? 0) + 1;
+      this.backfillQueueCountByServer.set(key, queued);
+      console.log(
+        `[ingest] backfill already running for server ${serverId}, queued rerun #${queued}`
+      );
       return;
     }
 
@@ -162,33 +169,77 @@ export class Ingester {
 
       // Collect every human message in this server.
       const batch: Message[] = [];
+      const selectionStats = {
+        scanned: 0,
+        selected: 0,
+        skippedBotAuthor: 0,
+        skippedMissingChannel: 0,
+        skippedOtherServer: 0,
+        skippedBySourceScope: 0,
+        skippedByChannelOverride: 0,
+        skippedByServerDefault: 0,
+      };
       for (const m of this.conn.db.message.iter()) {
-        if (m.authorId.toHexString() === this.botIdentityHex) continue;
+        selectionStats.scanned++;
+        if (m.authorId.toHexString() === this.botIdentityHex) {
+          selectionStats.skippedBotAuthor++;
+          continue;
+        }
         const ch = this.conn.db.channel.id.find(m.channelId);
-        if (!ch || ch.serverId !== serverId) continue;
+        if (!ch) {
+          selectionStats.skippedMissingChannel++;
+          continue;
+        }
+        if (ch.serverId !== serverId) {
+          selectionStats.skippedOtherServer++;
+          continue;
+        }
         const allowed = this.allowedChannels(serverId);
-        if (allowed !== null && !allowed.has(m.channelId.toString())) continue;
+        if (allowed !== null && !allowed.has(m.channelId.toString())) {
+          selectionStats.skippedBySourceScope++;
+          continue;
+        }
         const chAiCfg = this.conn.db.channel_ai_config.channelId.find(m.channelId);
         if (chAiCfg) {
-          if (!chAiCfg.indexingEnabled) continue;
+          if (!chAiCfg.indexingEnabled) {
+            selectionStats.skippedByChannelOverride++;
+            continue;
+          }
         } else {
           const srvCfg = this.conn.db.ai_config.serverId.find(serverId);
-          if (srvCfg && !srvCfg.indexingEnabledByDefault) continue;
+          if (srvCfg && !srvCfg.indexingEnabledByDefault) {
+            selectionStats.skippedByServerDefault++;
+            continue;
+          }
         }
         batch.push(m);
+        selectionStats.selected++;
       }
+      console.log(
+        `[ingest] server ${serverId}: backfill selection stats ` +
+          `scanned=${selectionStats.scanned} selected=${selectionStats.selected} ` +
+          `skipped={bot:${selectionStats.skippedBotAuthor},missingChannel:${selectionStats.skippedMissingChannel},` +
+          `otherServer:${selectionStats.skippedOtherServer},sourceScope:${selectionStats.skippedBySourceScope},` +
+          `channelOverride:${selectionStats.skippedByChannelOverride},serverDefault:${selectionStats.skippedByServerDefault}}`
+      );
       if (batch.length === 0) {
         console.log(`[ingest] server ${serverId}: no human messages to backfill`);
         return;
       }
       console.log(`[ingest] server ${serverId}: backfilling ${batch.length} messages`);
       const CHUNK = 32;
+      let trimmedOut = 0;
+      let embedded = 0;
       for (let i = 0; i < batch.length; i += CHUNK) {
         const slice = batch.slice(i, i + CHUNK);
         const kept: Array<{ msg: Message; text: string }> = [];
         for (const msg of slice) {
           const text = this.trim(msg.text);
-          if (text.length > 0) kept.push({ msg, text });
+          if (text.length > 0) {
+            kept.push({ msg, text });
+          } else {
+            trimmedOut++;
+          }
         }
         if (kept.length === 0) continue;
         try {
@@ -199,6 +250,7 @@ export class Ingester {
               vector: vectors[idx]!,
             }))
           );
+          embedded += kept.length;
           console.log(
             `[ingest] server ${serverId}: backfilled ${Math.min(i + CHUNK, batch.length)}/${batch.length}`
           );
@@ -207,10 +259,18 @@ export class Ingester {
           await new Promise(r => setTimeout(r, 1000));
         }
       }
+      console.log(
+        `[ingest] server ${serverId}: backfill completed embedded=${embedded} trimmedOut=${trimmedOut}`
+      );
     } finally {
       this.backfillInFlight.delete(key);
       if (this.backfillQueued.delete(key)) {
+        const queued = this.backfillQueueCountByServer.get(key) ?? 0;
+        this.backfillQueueCountByServer.delete(key);
         this.backfilled.delete(key);
+        console.log(
+          `[ingest] server ${serverId}: processing queued backfill rerun (queued=${queued})`
+        );
         void this.backfillServer(serverId);
       }
     }
@@ -218,7 +278,10 @@ export class Ingester {
 
   private triggerServerBackfill(serverId: bigint, reason: string): void {
     this.backfilled.delete(serverId.toString());
+    const count = (this.backfillTriggerCountByReason.get(reason) ?? 0) + 1;
+    this.backfillTriggerCountByReason.set(reason, count);
     console.log(`[ingest] ${reason} for server ${serverId}, starting backfill`);
+    console.log(`[ingest] trigger stats: reason="${reason}" count=${count}`);
     void this.backfillServer(serverId);
   }
 
