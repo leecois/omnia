@@ -180,8 +180,14 @@ export class RAGHandler {
     this.cumulativeHitFilter.missingChannel += filterStats.missingChannel;
     this.cumulativeHitFilter.wrongServer += filterStats.wrongServer;
     this.cumulativeHitFilter.policyDenied += filterStats.policyDenied;
+    const rejectedTotal =
+      filterStats.missingMessage +
+      filterStats.missingChannel +
+      filterStats.wrongServer +
+      filterStats.policyDenied;
+    const accountedTotal = filterStats.accepted + rejectedTotal;
     console.log(
-      `[rag] hit filter request #${req.id}: total=${filterStats.total} accepted=${filterStats.accepted} ` +
+      `[rag] hit filter request #${req.id}: total=${filterStats.total} accepted=${filterStats.accepted} rejected=${rejectedTotal} accounted=${accountedTotal} ` +
         `rejected={missingMessage:${filterStats.missingMessage},missingChannel:${filterStats.missingChannel},` +
         `wrongServer:${filterStats.wrongServer},policyDenied:${filterStats.policyDenied}} ` +
         `cumulative={missingMessage:${this.cumulativeHitFilter.missingMessage},missingChannel:${this.cumulativeHitFilter.missingChannel},` +
