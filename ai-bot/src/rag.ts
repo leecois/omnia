@@ -31,6 +31,12 @@ RULES:
 
 export class RAGHandler {
   private processing = new Set<string>();
+  private cumulativeHitFilter = {
+    missingMessage: 0,
+    missingChannel: 0,
+    wrongServer: 0,
+    policyDenied: 0,
+  };
 
   constructor(
     private conn: DbConnection,
@@ -138,17 +144,49 @@ export class RAGHandler {
     // 3. Resolve hits against the local SpacetimeDB cache. If a point is
     //    stale (message deleted), skip it.
     const contexts: Array<{ rank: number; msg: Message; score: number }> = [];
+    const filterStats = {
+      total: hits.length,
+      accepted: 0,
+      missingMessage: 0,
+      missingChannel: 0,
+      wrongServer: 0,
+      policyDenied: 0,
+    };
     for (const hit of hits) {
       const msgId = BigInt(hit.point.messageId);
       const msg = this.conn.db.message.id.find(msgId);
-      if (msg) {
-        const channel = this.conn.db.channel.id.find(msg.channelId);
-        if (!channel || channel.serverId !== req.serverId) continue;
-        if (!this.isChannelSearchEnabled(cfg, msg.channelId, allowedChannels)) continue;
-        contexts.push({ rank: contexts.length + 1, msg, score: hit.score });
-        if (totalChars(contexts) >= this.cfg.maxContextChars) break;
+      if (!msg) {
+        filterStats.missingMessage++;
+        continue;
       }
+      const channel = this.conn.db.channel.id.find(msg.channelId);
+      if (!channel) {
+        filterStats.missingChannel++;
+        continue;
+      }
+      if (channel.serverId !== req.serverId) {
+        filterStats.wrongServer++;
+        continue;
+      }
+      if (!this.isChannelSearchEnabled(cfg, msg.channelId, allowedChannels)) {
+        filterStats.policyDenied++;
+        continue;
+      }
+      contexts.push({ rank: contexts.length + 1, msg, score: hit.score });
+      filterStats.accepted++;
+      if (totalChars(contexts) >= this.cfg.maxContextChars) break;
     }
+    this.cumulativeHitFilter.missingMessage += filterStats.missingMessage;
+    this.cumulativeHitFilter.missingChannel += filterStats.missingChannel;
+    this.cumulativeHitFilter.wrongServer += filterStats.wrongServer;
+    this.cumulativeHitFilter.policyDenied += filterStats.policyDenied;
+    console.log(
+      `[rag] hit filter request #${req.id}: total=${filterStats.total} accepted=${filterStats.accepted} ` +
+        `rejected={missingMessage:${filterStats.missingMessage},missingChannel:${filterStats.missingChannel},` +
+        `wrongServer:${filterStats.wrongServer},policyDenied:${filterStats.policyDenied}} ` +
+        `cumulative={missingMessage:${this.cumulativeHitFilter.missingMessage},missingChannel:${this.cumulativeHitFilter.missingChannel},` +
+        `wrongServer:${this.cumulativeHitFilter.wrongServer},policyDenied:${this.cumulativeHitFilter.policyDenied}}`
+    );
 
     // Apply authority weight multiplier from channel_ai_config.
     // Low=0.5, Normal=1.0, High=1.5, Canonical=2.0
