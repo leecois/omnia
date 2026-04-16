@@ -200,6 +200,12 @@ export class Ingester {
     }
   }
 
+  private triggerServerBackfill(serverId: bigint, reason: string): void {
+    this.backfilled.delete(serverId.toString());
+    console.log(`[ingest] ${reason} for server ${serverId}, starting backfill`);
+    void this.backfillServer(serverId);
+  }
+
   /** Wire up the live message-insert listener and ai_config watcher. */
   subscribeLive(): void {
     this.conn.db.message.onInsert((_ctx, msg) => {
@@ -216,22 +222,59 @@ export class Ingester {
     // serverId so onUpdate is exposed.
     this.conn.db.ai_config.onUpdate((_ctx, oldRow, newRow) => {
       if (!oldRow.enabled && newRow.enabled) {
-        console.log(`[ingest] ai_config enabled for server ${newRow.serverId}, starting backfill`);
-        void this.backfillServer(newRow.serverId);
+        this.triggerServerBackfill(newRow.serverId, 'ai_config enabled');
+        return;
       }
       if (oldRow.enabled && !newRow.enabled) {
         // Allow a future enable to re-trigger backfill.
         this.backfilled.delete(newRow.serverId.toString());
         console.log(`[ingest] ai_config disabled for server ${newRow.serverId}`);
+        return;
+      }
+
+      const scopeChanged =
+        oldRow.sourceChannelIds !== newRow.sourceChannelIds ||
+        oldRow.indexingEnabledByDefault !== newRow.indexingEnabledByDefault;
+      if (newRow.enabled && scopeChanged) {
+        this.triggerServerBackfill(newRow.serverId, 'ai_config indexing scope changed');
       }
     });
     this.conn.db.ai_config.onInsert((_ctx, row) => {
       if (row.enabled) {
-        console.log(
-          `[ingest] ai_config inserted already-enabled for server ${row.serverId}, starting backfill`
-        );
-        void this.backfillServer(row.serverId);
+        this.triggerServerBackfill(row.serverId, 'ai_config inserted already-enabled');
       }
+    });
+
+    // Channel-level indexing can be toggled independently from ai_config.
+    // When a channel becomes indexable, force a server backfill so pre-existing
+    // messages in that channel are indexed.
+    this.conn.db.channel_ai_config.onInsert((_ctx, row) => {
+      if (!row.indexingEnabled) return;
+      const ch = this.conn.db.channel.id.find(row.channelId);
+      if (!ch) return;
+      this.triggerServerBackfill(
+        ch.serverId,
+        `channel_ai_config enabled on channel ${row.channelId}`
+      );
+    });
+    this.conn.db.channel_ai_config.onUpdate((_ctx, oldRow, newRow) => {
+      if (oldRow.indexingEnabled || !newRow.indexingEnabled) return;
+      const ch = this.conn.db.channel.id.find(newRow.channelId);
+      if (!ch) return;
+      this.triggerServerBackfill(
+        ch.serverId,
+        `channel_ai_config changed to enabled on channel ${newRow.channelId}`
+      );
+    });
+    this.conn.db.channel_ai_config.onDelete((_ctx, row) => {
+      const ch = this.conn.db.channel.id.find(row.channelId);
+      if (!ch) return;
+      const cfg = this.conn.db.ai_config.serverId.find(ch.serverId);
+      if (!cfg || !cfg.enabled || !cfg.indexingEnabledByDefault) return;
+      this.triggerServerBackfill(
+        ch.serverId,
+        `channel_ai_config reset on channel ${row.channelId} (fallback enabled)`
+      );
     });
   }
 
