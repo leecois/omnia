@@ -13,16 +13,20 @@
 // The SpacetimeDB SDK uses it for WebSocket decompression.
 if (typeof globalThis.DecompressionStream === 'undefined') {
   const zlib = await import('node:zlib');
-  // @ts-expect-error — minimal polyfill, matches the subset the SDK uses
   globalThis.DecompressionStream = class DecompressionStream {
     readable: ReadableStream;
     writable: WritableStream;
     constructor(format: string) {
       const decompressor =
-        format === 'gzip' ? zlib.createGunzip() :
-        format === 'deflate' ? zlib.createInflate() :
-        format === 'deflate-raw' ? zlib.createInflateRaw() :
-        (() => { throw new Error(`Unsupported format: ${format}`); })();
+        format === 'gzip'
+          ? zlib.createGunzip()
+          : format === 'deflate'
+            ? zlib.createInflate()
+            : format === 'deflate-raw'
+              ? zlib.createInflateRaw()
+              : (() => {
+                  throw new Error(`Unsupported format: ${format}`);
+                })();
       this.readable = new ReadableStream({
         start(controller) {
           decompressor.on('data', (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
@@ -31,8 +35,12 @@ if (typeof globalThis.DecompressionStream === 'undefined') {
         },
       });
       this.writable = new WritableStream({
-        write(chunk) { decompressor.write(chunk); },
-        close() { decompressor.end(); },
+        write(chunk) {
+          decompressor.write(chunk);
+        },
+        close() {
+          decompressor.end();
+        },
       });
     }
   };
