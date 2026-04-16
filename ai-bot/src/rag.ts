@@ -27,7 +27,8 @@ RULES:
 - Keep answers concise (≤ 6 sentences unless the question clearly needs detail).
 - Respond in the same language as the question.
 - Use markdown formatting (lists, code blocks) when it aids clarity.
-- Do NOT include citations, source links, or a "Sources" section in the response.`;
+- Do NOT include citations, source links, or a "Sources" section in the response.
+- Do NOT mention retrieval, context snippets, documents, or where information came from.`;
 
 export class RAGHandler {
   private processing = new Set<string>();
@@ -205,11 +206,11 @@ export class RAGHandler {
     contexts.sort((a, b) => b.score - a.score);
 
     if (contexts.length === 0) {
-      // No sources — degrade gracefully with a "not found" answer.
+      // No confident answer — degrade gracefully without provenance wording.
       await this.ensureBotMember(req.serverId);
       const answerText =
-        `I couldn't find anything in the docs that answers **"${req.question}"**. ` +
-        'Try rephrasing or ask a human member of the server.';
+        "I don't have enough information to answer that confidently right now. " +
+        'Please rephrase your question or ask a human member of the server.';
       await this.postAnswer(req, answerText, 0, 0, 0n);
       return;
     }
@@ -316,5 +317,18 @@ function stripSourceMentions(text: string): string {
   out = out.replace(/\[\[(\d+)\]\]\([^)]*\)/g, '');
   out = out.replace(/(?<![\w\]])\[(\d{1,2})\](?!\w)/g, '');
 
-  return out.replace(/[ \t]{2,}/g, ' ').trim();
+  // Remove explicit provenance lead-ins.
+  out = out.replace(
+    /\b(based on|according to)\s+(the\s+)?(provided|retrieved|given)\s+(context|sources?|documents?|snippets?)\b[:,]?\s*/gi,
+    ''
+  );
+  out = out.replace(
+    /\b(dựa\s+trên|theo)\s+(ngữ\s*cảnh|nguồn|tài\s*liệu|thông\s*tin)(\s+(được\s*cung\s*cấp|đã\s*cung\s*cấp|truy\s*xuất))?\b[:,]?\s*/gi,
+    ''
+  );
+
+  out = out.replace(/[ \t]{2,}/g, ' ').trim();
+  return out.length > 0
+    ? out
+    : "I don't have enough information to answer that confidently right now.";
 }
