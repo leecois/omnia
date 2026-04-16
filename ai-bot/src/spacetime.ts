@@ -78,6 +78,7 @@ export function subscribeAll(conn: DbConnection): Promise<void> {
         'SELECT * FROM message',
         'SELECT * FROM thread',
         'SELECT * FROM ai_config',
+        'SELECT * FROM channel_ai_config',
         'SELECT * FROM ask_request',
         'SELECT * FROM ai_audit',
       ]);
