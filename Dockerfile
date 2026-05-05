@@ -46,9 +46,7 @@ FROM nginx:1.27-alpine AS runtime
 
 RUN apk add --no-cache curl
 
-# Replace the default nginx config with ours (SPA fallback, gzip, caching).
-RUN rm /etc/nginx/conf.d/default.conf
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Keep default nginx config (Dokploy handles proxy/routing).
 
 # Ship only the built assets — no source, no node_modules, no secrets.
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -61,6 +59,6 @@ RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx \
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -fsS http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1
+  CMD curl -fsS http://127.0.0.1/ >/dev/null 2>&1 || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

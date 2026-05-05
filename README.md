@@ -367,8 +367,8 @@ bun run build
 ```
 
 Serve the `dist/` folder with any static host (nginx, Caddy, Vercel, Netlify,
-Cloudflare Pages, etc.). A `Dockerfile` and `docker/nginx.conf` are included
-if you prefer a container.
+Cloudflare Pages, etc.). A `Dockerfile` is included if you prefer a
+containerized deployment.
 
 The backend module is published separately:
 
